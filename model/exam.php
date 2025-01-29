@@ -35,7 +35,17 @@ class Exams {
         }
     }
 
-   
+    public function getExamByTerm($term)
+    {
+        $query = "SELECT * FROM exams WHERE term = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("s", $term);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    
+        return $result->num_rows > 0 ? $result->fetch_assoc() : null;
+    }
+    
     
 }
 ?>

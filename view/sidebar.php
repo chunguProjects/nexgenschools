@@ -50,23 +50,23 @@
             <hr class="my-1 text-primary mx-auto w-75">
 
             <!-- Generate Reports (Dropdown) -->
-            <li class="sidebar-item">
-                <a href="#" class="sidebar-link px-3 py-2 d-block collapsed text-light" data-bs-toggle="collapse" data-bs-target="#reportsMenu" aria-expanded="false">
-                    <i class="fa-solid fa-chart-bar me-2"></i> Generate Reports
+           <li class="sidebar-item">
+              <a href="index.php?page=report" class="sidebar-link px-3 py-2 d-block collapsed text-light" data-bs-toggle="collapse" data-bs-target="#reportsMenu" aria-expanded="false">
+                <i class="fa-solid fa-chart-bar me-2"></i> Generate Reports
+               </a>
+                     <ul id="reportsMenu" class="sidebar-dropdown collapse list-unstyled ms-3">
+                          <li class="sidebar-item">
+                             <a href="#" class="sidebar-link px-3 py-2 d-block text-light" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+                          <i class="fa-solid fa-chart-bar me-2"></i> Classes
                 </a>
-                <ul id="reportsMenu" class="sidebar-dropdown collapse list-unstyled ms-3">
-                    <li class="sidebar-item">
-                        <a href="index.php?page=report_classes" class="sidebar-link text-light <?php echo ($currentPage == 'report_classes') ? 'active text-warning fw-bold' : ''; ?>">
-                            Classes
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="index.php?page=report_teachers" class="sidebar-link text-light <?php echo ($currentPage == 'report_teachers') ? 'active text-warning fw-bold' : ''; ?>">
-                            Teachers
-                        </a>
-                    </li>
-                </ul>
-            </li>
+          </li>
+           <li class="sidebar-item">
+            <a href="" class="sidebar-link text-light <?php echo ($currentPage == 'report') ? 'active text-warning fw-bold' : ''; ?>">
+                Students
+            </a>
+        </li>
+    </ul>
+</li>
         </ul>
     </div>
 </aside>

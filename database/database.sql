@@ -64,7 +64,7 @@ CREATE TABLE grades (
     class_id INT NOT NULL,
     subject_id INT NOT NULL,
     student_id INT NOT NULL,
-    grade VARCHAR(10) NOT NULL,
+    marks VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
@@ -74,14 +74,34 @@ CREATE TABLE grades (
 );
 
 
+CREATE TABLE grading_criteria (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    level VARCHAR(50) NOT NULL,      
+    grade VARCHAR(10) NOT NULL,       
+    min_marks INT NOT NULL,            
+    max_marks INT NOT NULL,            
+    description VARCHAR(255) NOT NULL
+);
 
 
--- CREATE TABLE results (
---     id INT AUTO_INCREMENT PRIMARY KEY,
---     student_id INT,
---     exam_id INT,
---     subject VARCHAR(100),
---     marks INT,
---     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
---     FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
--- );
+INSERT INTO grading_criteria (level, grade, min_marks, max_marks, description)
+VALUES 
+('Junior', 'A', 80, 100, 'Excellent'),
+('Junior', 'B', 70, 79, 'Very Good'),
+('Junior', 'C', 60, 69, 'Good'),
+('Junior', 'D', 50, 59, 'Satisfactory Pass'),
+('Junior', 'E', 40, 49, 'Pass'),
+('Junior', 'F', 0, 39, 'Fail');
+
+
+INSERT INTO grading_criteria (level, grade, min_marks, max_marks, description)
+VALUES 
+('Senior', '1', 80, 100, 'Distinction'),
+('Senior', '2', 75, 79, 'Distinction'),
+('Senior', '3', 70, 74, 'Credit'),
+('Senior', '4', 65, 69, 'Credit'),
+('Senior', '5', 60, 64, 'Credit'),
+('Senior', '6', 55, 59, 'Credit'),
+('Senior', '7', 50, 54, 'Pass'),
+('Senior', '8', 40, 49, 'Pass'),
+('Senior', '9', 0, 39, 'Fail');

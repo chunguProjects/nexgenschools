@@ -55,6 +55,31 @@ class Subjects {
     
         return $subjects;
     }
+
+
+   public function getSubjectsByClass($class_id)
+{
+    $query = "
+        SELECT s.subject_id, s.subject_name, s.subject_code, u.full_name AS teacher_name
+        FROM subjects s
+        INNER JOIN users u ON s.teacher_id = u.user_id
+    ";
+    $stmt = $this->conn->prepare($query);
+
+    if (!$stmt) {
+        die("Query error: " . $this->conn->error);
+    }
+
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $subjects = [];
+    while ($row = $result->fetch_assoc()) {
+        $subjects[] = $row;
+    }
+    return $subjects;
+}
+
     
 }
 

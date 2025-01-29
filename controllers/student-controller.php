@@ -29,5 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ../view/add-students-form.php?class_id=' . $classId . '&error=1'); // Redirect on failure
         exit();
     }
+
+    //retrieve students by class
+if (isset($_GET['class_id'])) {
+    $classId = $_GET['class_id'];
+    $students = $studentModel->getStudentsByClass($classId);
+
+    if ($students) {
+        echo json_encode(['success' => true, 'students' => $students]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'No students found.']);
+    }
+}
+
 }
 ?>

@@ -55,6 +55,17 @@ class ClassGroup {
         return $classes;
     }
     
+    public function getClassById($class_id)
+{
+    $query = "SELECT * FROM classes WHERE class_id = ?";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bind_param("i", $class_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    return $result->num_rows > 0 ? $result->fetch_assoc() : null;
+}
+
 }
 
 ?>

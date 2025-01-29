@@ -48,6 +48,7 @@
 
     <script src="../bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js"></script>
     <script src="../js/script.js"></script>
+    <?php include('../view/modal-report.php'); ?>
 </body>
 
 </html>

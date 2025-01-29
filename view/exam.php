@@ -46,7 +46,7 @@ $exams = $examModel->getAllExams();
                                 <td>
                                     <button class="btn btn-sm btn-primary editExamBtn" data-id="<?php echo $exam['id']; ?>">Edit</button>
                                     <button class="btn btn-sm btn-danger deleteExamBtn" data-id="<?php echo $exam['id']; ?>">Delete</button>
-                                    <a href="index.php?page=add-grades-form&class_id=1">Add Grades</a>
+                                    <a href="index.php?page=add-grades-form&exam_id=<?php echo $exam['id']; ?>" class="btn btn-sm btn-success">Add Grades</a>
 
                                 </td>
                             </tr>
