@@ -65,6 +65,15 @@ class ClassGroup {
 
     return $result->num_rows > 0 ? $result->fetch_assoc() : null;
 }
+public function determineGradingLevel($className)
+{
+    if (preg_match('/\d+/', $className, $matches)) {
+        $classNumber = (int)$matches[0];
+        return ($classNumber <= 2) ? 'Junior' : 'Senior';
+    }
+    return 'Junior'; // default
+}
+
 
 }
 

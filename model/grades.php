@@ -71,5 +71,36 @@ class Grades
         // Default if no match is found
         return 'N/A';
     }
+        public function getGradesByStudentTerm($student_id, $term)
+    {
+        $query = "
+            SELECT g.subject_id, g.marks, c.name AS class_name
+            FROM grades g
+            INNER JOIN exams e ON g.exam_id = e.id
+            INNER JOIN classes c ON g.class_id = c.class_id
+            WHERE g.student_id = ? AND e.term = ?
+        ";
+        $stmt = $this->conn->prepare($query);
+        if (!$stmt) {
+            die("SQL Error: " . $this->conn->error);
+        }
+        $stmt->bind_param("is", $student_id, $term);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if (!$result) {
+            die("Execution Error: " . $this->conn->error);
+        }
+
+        $grades = [];
+        while ($row = $result->fetch_assoc()) {
+            $row['grade'] = $this->calculateGrade($row['marks'], $row['class_name']);
+            $grades[] = $row;
+        }
+
+        return $grades;
+    }
+
+
 }
 ?>
