@@ -1,5 +1,6 @@
 <?php
-// model/user.php
+// models/User.php
+
 class User {
     private $conn;
 
@@ -7,32 +8,65 @@ class User {
         $this->conn = $db;
     }
 
-    public function addUser($fullName, $countryCode, $phoneNumber, $username, $email, $password, $role) {
-        $query = "INSERT INTO users (full_name, country_code, phone_number, username, email, password, role) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?)";
+    // Add new user
+    public function addUser($fullName, $countryCode, $phoneNumber, $username, $email, $password, $role_id, $school_id) {
+        $query = "INSERT INTO users (full_name, country_code, phone_number, username, email, password, role_id, school_id) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($query);
-    
-        // Hash the password and store it in a variable
+
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-    
-        // Bind the parameters
-        $stmt->bind_param("sssssss", $fullName, $countryCode, $phoneNumber, $username, $email, $hashedPassword, $role);
-    
-        // Execute the query
+
+        $stmt->bind_param("ssssssii", 
+            $fullName, 
+            $countryCode, 
+            $phoneNumber, 
+            $username, 
+            $email, 
+            $hashedPassword, 
+            $role_id, 
+            $school_id
+        );
+
         return $stmt->execute();
     }
-    
 
-    public function getAllUsers() {
-        $query = "SELECT * FROM users";
-        $result = $this->conn->query($query);
-        return $result;
+    // Get all users for a specific school
+    public function getAllUsers($school_id) {
+        $query = "
+            SELECT u.*, r.name AS role_name 
+            FROM users u
+            JOIN roles r ON u.role_id = r.role_id
+            WHERE u.school_id = ?
+            ORDER BY u.full_name
+        ";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $school_id);
+        $stmt->execute();
+        return $stmt->get_result();
     }
 
+    // Delete user by ID
     public function deleteUser($userId) {
         $query = "DELETE FROM users WHERE user_id = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("i", $userId);
+        return $stmt->execute();
+    }
+
+    // Get user by ID (optional for editing)
+    public function getUserById($userId) {
+        $query = "SELECT * FROM users WHERE user_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    }
+
+    // Update user basic details (optional)
+    public function updateUser($userId, $fullName, $email, $phoneNumber) {
+        $query = "UPDATE users SET full_name = ?, email = ?, phone_number = ? WHERE user_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("sssi", $fullName, $email, $phoneNumber, $userId);
         return $stmt->execute();
     }
 }

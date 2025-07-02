@@ -1,7 +1,40 @@
+-- 1. SCHOOLS
+CREATE TABLE IF NOT EXISTS schools (
+    school_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+-- 2. ROLES
+CREATE TABLE IF NOT EXISTS roles (
+    role_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. PERMISSIONS
+CREATE TABLE IF NOT EXISTS permissions (
+    permission_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. ROLE_PERMISSIONS (many-to-many)
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id INT NOT NULL,
+    permission_id INT NOT NULL,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions(permission_id) ON DELETE CASCADE
+);
+
+-- 5. USERS
 CREATE TABLE IF NOT EXISTS users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
-    school_id INT NOT NULL,
+    school_id INT,
     full_name VARCHAR(255),
     country_code VARCHAR(5),
     phone_number VARCHAR(15),
@@ -10,6 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255),
     role_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    password_updated BOOLEAN NOT NULL DEFAULT 0;
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE SET NULL,
@@ -18,6 +52,7 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_role_user (role_id)
 );
 
+-- 6. CLASSES
 CREATE TABLE IF NOT EXISTS classes (
     class_id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL,
@@ -26,10 +61,12 @@ CREATE TABLE IF NOT EXISTS classes (
     teacher_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
     INDEX idx_school_class (school_id)
 );
 
+-- 7. SUBJECTS
 CREATE TABLE IF NOT EXISTS subjects (
     subject_id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL,
@@ -38,10 +75,12 @@ CREATE TABLE IF NOT EXISTS subjects (
     teacher_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
     INDEX idx_school_subject (school_id)
 );
 
+-- 8. STUDENTS
 CREATE TABLE IF NOT EXISTS students (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL,
@@ -54,11 +93,13 @@ CREATE TABLE IF NOT EXISTS students (
     address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE SET NULL ON UPDATE CASCADE,
     INDEX idx_school_student (school_id),
     INDEX idx_class_student (class_id)
 );
 
+-- 9. EXAMS
 CREATE TABLE IF NOT EXISTS exams (
     id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL,
@@ -67,9 +108,11 @@ CREATE TABLE IF NOT EXISTS exams (
     academic_year VARCHAR(9) CHECK (academic_year LIKE '____-____'),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     INDEX idx_school_exam (school_id)
 );
 
+-- 10. GRADES
 CREATE TABLE IF NOT EXISTS grades (
     id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL,
@@ -80,6 +123,7 @@ CREATE TABLE IF NOT EXISTS grades (
     marks VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
     FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE,
@@ -91,6 +135,7 @@ CREATE TABLE IF NOT EXISTS grades (
     INDEX idx_student_grades (student_id)
 );
 
+-- 11. GRADING CRITERIA
 CREATE TABLE IF NOT EXISTS grading_criteria (
     id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL,
@@ -100,89 +145,25 @@ CREATE TABLE IF NOT EXISTS grading_criteria (
     max_marks INT NOT NULL,
     description VARCHAR(255) NOT NULL,
 
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     INDEX idx_school_level (school_id, level)
 );
 
-CREATE TABLE IF NOT EXISTS roles (
-    role_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO roles (name, description) VALUES
-('superadmin', 'System owner with full access to everything'),
-('schooladmin', 'Manages a single school – students, classes, users, etc.'),
-('teacher', 'Manages assigned subjects, students, and grades'),
-('parent', 'Views only their child’s grades and reports');
-
-CREATE TABLE IF NOT EXISTS permissions (
-    permission_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO permissions (name, description) VALUES
-('manage_schools', 'Can add or remove schools'),
-('manage_users', 'Can add or manage user accounts'),
-('manage_classes', 'Can create or edit classes'),
-('manage_subjects', 'Can assign or manage subjects'),
-('manage_students', 'Can enroll or update students'),
-('manage_exams', 'Can set exams and terms'),
-('enter_grades', 'Can enter student grades'),
-('view_reports', 'Can view report cards'),
-('view_own_child', 'Can view own child’s progress only');
-
-CREATE TABLE IF NOT EXISTS role_permissions (
-    role_id INT NOT NULL,
-    permission_id INT NOT NULL,
-    PRIMARY KEY (role_id, permission_id),
-    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE,
-    FOREIGN KEY (permission_id) REFERENCES permissions(permission_id) ON DELETE CASCADE
-);
--- Superadmin: full access
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
-FROM roles r, permissions p
-WHERE r.name = 'superadmin';
-
--- School Admin: manage most things except global (like schools)
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
-FROM roles r, permissions p
-WHERE r.name = 'schooladmin' AND p.name IN (
-  'manage_users', 'manage_classes', 'manage_subjects',
-  'manage_students', 'manage_exams', 'enter_grades', 'view_reports'
-);
-
--- Teacher: only teach-related permissions
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
-FROM roles r, permissions p
-WHERE r.name = 'teacher' AND p.name IN (
-  'manage_exams', 'enter_grades', 'view_reports'
-);
-
--- Parent: only view child info
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
-FROM roles r, permissions p
-WHERE r.name = 'parent' AND p.name = 'view_own_child';
-
+-- 12. PARENT-STUDENT RELATIONSHIP
 CREATE TABLE IF NOT EXISTS parent_student (
     id INT AUTO_INCREMENT PRIMARY KEY,
     parent_id INT NOT NULL,
     student_id INT NOT NULL,
-    relationship VARCHAR(50), -- e.g., "Mother", "Father", "Guardian"
+    relationship VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (parent_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
 
-    UNIQUE (parent_id, student_id) -- prevent duplicate link
+    UNIQUE (parent_id, student_id)
 );
 
+-- 13. SCHOOL SETTINGS
 CREATE TABLE IF NOT EXISTS school_settings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL UNIQUE,
@@ -197,3 +178,51 @@ CREATE TABLE IF NOT EXISTS school_settings (
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE
 );
+-- ROLES
+INSERT INTO roles (name, description) VALUES
+('superadmin', 'System owner with full access to everything'),
+('schooladmin', 'Manages a single school – students, classes, users, etc.'),
+('teacher', 'Manages assigned subjects, students, and grades'),
+('parent', 'Views only their child’s grades and reports');
+
+-- PERMISSIONS
+INSERT INTO permissions (name, description) VALUES
+('manage_schools', 'Can add or remove schools'),
+('manage_users', 'Can add or manage user accounts'),
+('manage_classes', 'Can create or edit classes'),
+('manage_subjects', 'Can assign or manage subjects'),
+('manage_students', 'Can enroll or update students'),
+('manage_exams', 'Can set exams and terms'),
+('enter_grades', 'Can enter student grades'),
+('view_reports', 'Can view report cards'),
+('view_own_child', 'Can view own child’s progress only');
+
+-- Superadmin: all permissions
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r, permissions p
+WHERE r.name = 'superadmin';
+
+-- School Admin: most permissions
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r, permissions p
+WHERE r.name = 'schooladmin'
+  AND p.name IN (
+    'manage_users', 'manage_classes', 'manage_subjects',
+    'manage_students', 'manage_exams', 'enter_grades', 'view_reports'
+);
+
+-- Teacher: limited permissions
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r, permissions p
+WHERE r.name = 'teacher'
+  AND p.name IN ('manage_exams', 'enter_grades', 'view_reports');
+
+-- Parent: only view their child
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r, permissions p
+WHERE r.name = 'parent'
+  AND p.name = 'view_own_child';

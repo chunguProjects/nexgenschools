@@ -1,46 +1,66 @@
-
 <?php
-// Include database connection and Student model
 include('../config/db.php');
 include('../model/student.php');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get class_id from the form
-    $classId = $_POST['class_id'];
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-    // Create an array of students
+$studentModel = new Student($conn);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Collect posted data
+    $classId = $_POST['class_id'] ?? null;
+    $firstNames = $_POST['first_name'] ?? [];
+    $lastNames = $_POST['last_name'] ?? [];
+    $genders = $_POST['gender'] ?? [];
+    $parentPhones = $_POST['parent_phone'] ?? [];
+    $relationships = $_POST['relationship'] ?? [];
+
+    // Validate basic inputs
+    if (!$classId || empty($firstNames) || empty($parentPhones)) {
+        header('Location: ../view/add-students-form.php?class_id=' . $classId . '&error=missing_data');
+        exit();
+    }
+
     $students = [];
-    foreach ($_POST['first_name'] as $index => $firstName) {
+
+    // Build student array with parent info
+    foreach ($firstNames as $index => $firstName) {
         $students[] = [
-            'first_name' => $firstName,
-            'last_name' => $_POST['last_name'][$index],
-            'gender' => $_POST['gender'][$index]
+            'first_name' => trim($firstName),
+            'last_name' => trim($lastNames[$index] ?? ''),
+            'gender' => $genders[$index] ?? '',
+            'parent_phone' => trim($parentPhones[$index] ?? ''),
+            'relationship' => $relationships[$index] ?? '',
+            'class_id' => $classId,
         ];
     }
 
-    // Create Student model object
-    $studentModel = new Student($conn);
+    // Add students with parent creation/linking
+    $result = $studentModel->addStudentsWithParents($students);
 
-    // Add students to the class
-    if ($studentModel->addStudentsToClass($students, $classId)) {
-        header('Location: ../view/class.php?success=1'); // Redirect on success
+    if ($result['success']) {
+        header('Location: ../view/class.php?success=students_added');
         exit();
     } else {
-        header('Location: ../view/add-students-form.php?class_id=' . $classId . '&error=1'); // Redirect on failure
+        // You can also pass error message in $result['message']
+        header('Location: ../view/add-students-form.php?class_id=' . $classId . '&error=' . urlencode($result['message'] ?? 'unknown_error'));
         exit();
     }
+}
 
-    //retrieve students by class
-if (isset($_GET['class_id'])) {
-    $classId = $_GET['class_id'];
+// Handle GET request to fetch students by class (AJAX)
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['class_id'])) {
+    $classId = (int)$_GET['class_id'];
     $students = $studentModel->getStudentsByClass($classId);
 
     if ($students) {
+        header('Content-Type: application/json');
         echo json_encode(['success' => true, 'students' => $students]);
     } else {
+        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'No students found.']);
     }
+    exit();
 }
-
-}
-?>
