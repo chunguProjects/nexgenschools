@@ -2,52 +2,69 @@
 include('../config/db.php');
 include('../model/student.php');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 $studentModel = new Student($conn);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Collect posted data
     $classId = $_POST['class_id'] ?? null;
+    $studentIds = $_POST['student_id'] ?? []; // This can contain empty string for new entries
     $firstNames = $_POST['first_name'] ?? [];
     $lastNames = $_POST['last_name'] ?? [];
     $genders = $_POST['gender'] ?? [];
+    $dateOfBirths = $_POST['date_of_birth'] ?? [];
     $parentPhones = $_POST['parent_phone'] ?? [];
     $relationships = $_POST['relationship'] ?? [];
+    $deleteIds = $_POST['delete_student'] ?? [];
 
-    // Validate basic inputs
-    if (!$classId || empty($firstNames) || empty($parentPhones)) {
-        header('Location: ../view/add-students-form.php?class_id=' . $classId . '&error=missing_data');
+    if (!$classId || empty($firstNames)) {
+        header("Location: ../view/add-students-form.php?class_id=$classId&error=missing_data");
         exit();
     }
 
-    $students = [];
+    $newStudents = [];
 
-    // Build student array with parent info
     foreach ($firstNames as $index => $firstName) {
-        $students[] = [
-            'first_name' => trim($firstName),
-            'last_name' => trim($lastNames[$index] ?? ''),
-            'gender' => $genders[$index] ?? '',
-            'parent_phone' => trim($parentPhones[$index] ?? ''),
-            'relationship' => $relationships[$index] ?? '',
-            'class_id' => $classId,
+        $id = trim($studentIds[$index] ?? '');
+        $data = [
+            'first_name'     => trim($firstName),
+            'last_name'      => trim($lastNames[$index] ?? ''),
+            'gender'         => $genders[$index] ?? '',
+            'class_id'       => $classId,
+            'date_of_birth'  => $dateOfBirths[$index] ?? null,
+            'parent_phone'   => trim($parentPhones[$index] ?? ''),
+            'relationship'   => $relationships[$index] ?? '',
+            'contact_number' => trim($parentPhones[$index] ?? '')
         ];
+
+        if ($id === '') {
+            // New student
+            $newStudents[] = $data;
+        } else {
+            // Check if marked for deletion
+            if (in_array($id, $deleteIds)) {
+                $studentModel->deleteStudent((int)$id);
+            } else {
+                // Update existing
+                $studentModel->updateStudent((int)$id, $data);
+            }
+        }
     }
 
-    // Add students with parent creation/linking
-    $result = $studentModel->addStudentsWithParents($students);
+    // Add new students
+    $result = ['success' => true];
+    if (!empty($newStudents)) {
+        $result = $studentModel->addStudentsWithParents($newStudents);
+    }
 
     if ($result['success']) {
-        header('Location: ../view/class.php?success=students_added');
-        exit();
+        header("Location: ../view/class.php?success=students_saved");
     } else {
-        // You can also pass error message in $result['message']
-        header('Location: ../view/add-students-form.php?class_id=' . $classId . '&error=' . urlencode($result['message'] ?? 'unknown_error'));
-        exit();
+        $errorMsg = urlencode($result['message'] ?? 'Unknown error');
+        header("Location: ../view/add-students-form.php?class_id=$classId&error=$errorMsg");
     }
+
+    exit();
 }
 
 // Handle GET request to fetch students by class (AJAX)
@@ -55,12 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['class_id'])) {
     $classId = (int)$_GET['class_id'];
     $students = $studentModel->getStudentsByClass($classId);
 
-    if ($students) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'students' => $students]);
-    } else {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'No students found.']);
-    }
+    header('Content-Type: application/json');
+    echo json_encode($students ? ['success' => true, 'students' => $students] : ['success' => false, 'message' => 'No students found.']);
     exit();
 }

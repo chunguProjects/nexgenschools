@@ -3,6 +3,7 @@ session_start();
 if (!isset($_SESSION['user']) || $_SESSION['user']['role_name'] !== 'schooladmin') {
     header("Location: ../views/login.php");
     exit;
+    
 }
 $currentPage = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
 ?>

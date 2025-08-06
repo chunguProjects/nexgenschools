@@ -1,30 +1,53 @@
 <?php
-// Include necessary files
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 include('../config/db.php');
 include('../model/exam.php');
 
-// Create an instance of the Exams class
-$examModel = new Exams($conn);
+$schoolId = $_SESSION['user']['school_id'] ?? null;
+if (!$schoolId) {
+    echo "<div class='alert alert-danger'>Unauthorized access. School not identified.</div>";
+    exit;
+}
 
-// Retrieve all exams
-$exams = $examModel->getAllExams();
+$examModel = new Exams($conn);
+// Assuming getAllExams accepts schoolId to filter by school
+$exams = $examModel->getAllExams($schoolId);
+
 ?>
 
+
 <div class="container-fluid py-3">
-    <!-- Add Exam Button -->
+
+ <?php
+   if (isset($_SESSION['flash_message'])) {
+    $msg = $_SESSION['flash_message'];
+    $alertType = $msg['type'] === 'error' ? 'danger' : $msg['type'];
+    echo "<div class='alert alert-{$alertType}'>{$msg['text']}</div>";
+    unset($_SESSION['flash_message']);
+}
+
+    ?>
+    <!-- Header + Back + Add -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Exam Management</h4>
-        <a href="index.php?page=add-exam-form" class="btn btn-primary">
+        <div class="d-flex align-items-center">
+            <a href="schooladmin.php?page=dashboard" class="btn btn-outline-secondary me-3">
+                <i class="fa fa-arrow-left"></i> Back
+            </a>
+        </div>
+        <a href="schooladmin.php?page=add-exam-form" class="btn btn-primary">
             <i class="fa-solid fa-plus"></i> Add Exam
         </a>
     </div>
 
-    <!-- Exams List -->
+    <!-- Exams Table -->
     <div class="card shadow-sm">
         <div class="card-header">
             <h5 class="card-title mb-0">Exam List</h5>
         </div>
-        <div class="card-body">
+        <div class="card-body table-responsive">
             <table class="table table-bordered table-hover">
                 <thead class="table-light">
                     <tr>
@@ -39,15 +62,14 @@ $exams = $examModel->getAllExams();
                     <?php if (!empty($exams)) : ?>
                         <?php foreach ($exams as $exam) : ?>
                             <tr>
-                                <td><?php echo $exam['id']; ?></td>
-                                <td><?php echo htmlspecialchars($exam['exam_name']); ?></td>
-                                <td><?php echo htmlspecialchars($exam['term']); ?></td>
-                                <td><?php echo htmlspecialchars($exam['academic_year']); ?></td>
+                                <td><?= (int)$exam['id'] ?></td>
+                                <td><?= htmlspecialchars($exam['exam_name']) ?></td>
+                                <td><?= htmlspecialchars($exam['term']) ?></td>
+                                <td><?= htmlspecialchars($exam['academic_year']) ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-primary editExamBtn" data-id="<?php echo $exam['id']; ?>">Edit</button>
-                                    <button class="btn btn-sm btn-danger deleteExamBtn" data-id="<?php echo $exam['id']; ?>">Delete</button>
-                                    <a href="index.php?page=add-grades-form&exam_id=<?php echo $exam['id']; ?>" class="btn btn-sm btn-success">Add Grades</a>
-
+                                    <a href="schooladmin.php?page=add-exam-form&exam_id=<?= (int)$exam['id'] ?>" class="btn btn-sm btn-primary">Edit</a>
+                                    <button class="btn btn-danger deleteExamBtn" data-id="<?= $exam['id'] ?>">Delete</button>
+                                    <a href="schooladmin.php?page=add-grades-form&exam_id=<?= (int)$exam['id'] ?>" class="btn btn-sm btn-success">Add Grades</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -61,3 +83,35 @@ $exams = $examModel->getAllExams();
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const deleteButtons = document.querySelectorAll(".deleteExamBtn");
+
+    deleteButtons.forEach(button => {
+        button.addEventListener("click", function () {
+            const examId = this.dataset.id;
+            if (!confirm("Are you sure you want to delete this exam?")) return;
+
+            fetch("../controllers/exam-controller.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `delete_exam=1&exam_id=${examId}`
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.text();
+                }
+            })
+            .catch(error => {
+                alert("Failed to delete exam. Please try again.");
+                console.error("Error:", error);
+            });
+        });
+    });
+});
+</script>

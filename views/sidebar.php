@@ -4,7 +4,6 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 include('../config/db.php');
 
-$schoolName = "NextGen Schools";
 $schoolId = $_SESSION['user']['school_id'] ?? null;
 
 if ($schoolId) {
@@ -34,15 +33,26 @@ function navItem($page, $label, $icon, $currentPage) {
   <div class="d-flex flex-column h-100">
 
     <!-- School Header -->
-    <div class="sidebar-header d-flex justify-content-between align-items-center px-3 py-3 border-bottom">
-      <a href="schooladmin.php?page=dashboard" class="text-decoration-none text-primary fs-5 fw-semibold d-flex align-items-center">
-        <i class="fa-solid fa-graduation-cap me-2"></i>
-        <span><?= htmlspecialchars($schoolName) ?></span>
-      </a>
-      <button id="sidebar-close" class="btn btn-sm btn-outline-secondary d-md-none" aria-label="Close sidebar">
-        <i class="fa fa-times"></i>
-      </button>
-    </div>
+<?php
+require_once('../model/GeneralSettingsModel.php');
+$model = new GeneralSettingsModel($conn);
+$settings = $model->getSettings($schoolId);
+
+$logoPath = $settings['logo_path'] ?? null;
+$logoUrl = '/nexgenschools/' . ltrim($logoPath, '/');
+$logoFullPath = $logoPath ? __DIR__ . '/../' . $logoPath : null;
+?>
+<div class="sidebar-header d-flex justify-content-between align-items-center px-3 py-3 border-bottom">
+  <a href="schooladmin.php?page=dashboard" class="text-decoration-none text-primary fs-5 fw-semibold d-flex align-items-center">
+    <?php if ($logoPath && file_exists($logoFullPath)): ?>
+<img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo" style="max-height: 40px; max-width: 40px; object-fit: contain; margin-right: 8px;">
+    <?php else: ?>
+      <i class="fa-solid fa-school me-2"></i>
+    <?php endif; ?>
+    <span><?= htmlspecialchars($schoolName) ?></span>
+  </a>
+</div>
+
 
     <!-- Navigation -->
     <ul class="sidebar-nav list-unstyled flex-grow-1 mt-3 mb-0 px-2">
@@ -72,29 +82,35 @@ function navItem($page, $label, $icon, $currentPage) {
           <i class="fa-solid fa-chevron-down ms-auto small"></i>
         </a>
         <div class="collapse ps-3 <?= in_array($currentPage, ['class', 'subject', 'exam']) ? 'show' : '' ?>" id="academicMenu">
-          <a href="schooladmin.php?page=class" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'class') ? 'text-primary fw-semibold' : 'text-dark'; ?>">🏫 Classes</a>
-          <a href="schooladmin.php?page=subject" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'subject') ? 'text-primary fw-semibold' : 'text-dark'; ?>">📚 Subjects</a>
-          <a href="schooladmin.php?page=exam" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'exam') ? 'text-primary fw-semibold' : 'text-dark'; ?>">📝 Exams</a>
+        <a href="schooladmin.php?page=subject" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'subject') ? 'text-primary fw-semibold' : 'text-dark'; ?>">📚 Subjects</a>  
+        <a href="schooladmin.php?page=class" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'class') ? 'text-primary fw-semibold' : 'text-dark'; ?>">🏫 Classes</a>
+        <a href="schooladmin.php?page=exam" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'exam') ? 'text-primary fw-semibold' : 'text-dark'; ?>">📝 Exams</a>
         </div>
       </li>
 
       <!-- Grading Dropdown -->
-      <li>
-        <a class="d-flex align-items-center px-3 py-2 text-decoration-none text-dark <?= ($currentPage === 'report') ? '' : 'collapsed' ?>"
-           data-bs-toggle="collapse" href="#gradingMenu" aria-expanded="<?= ($currentPage === 'report') ? 'true' : 'false' ?>">
-          <i class="fa-solid fa-chart-bar me-2"></i>
-          <span>Grading</span>
-          <i class="fa-solid fa-chevron-down ms-auto small"></i>
-        </a>
-        <div class="collapse ps-3 <?= ($currentPage === 'report') ? 'show' : '' ?>" id="gradingMenu">
-          <a href="#" class="d-block py-1 px-3 text-decoration-none text-dark" data-bs-toggle="modal" data-bs-target="#generateReportModal">
-            📊 Class Reports
-          </a>
-          <a href="schooladmin.php?page=report" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'report') ? 'text-primary fw-semibold' : 'text-dark'; ?>">
-            👥 Student Reports
-          </a>
-        </div>
-      </li>
+      
+        <li>
+            <a class="d-flex align-items-center px-3 py-2 text-decoration-none text-dark <?= in_array($currentPage, ['report', 'grading']) ? '' : 'collapsed' ?>"
+              data-bs-toggle="collapse" href="#gradingMenu" aria-expanded="<?= in_array($currentPage, ['report', 'grading']) ? 'true' : 'false' ?>">
+              <i class="fa-solid fa-chart-bar me-2"></i>
+              <span>Grading</span>
+              <i class="fa-solid fa-chevron-down ms-auto small"></i>
+            </a>
+            <div class="collapse ps-3 <?= in_array($currentPage, ['report', 'grading']) ? 'show' : '' ?>" id="gradingMenu">
+              <a href="schooladmin.php?page=grading" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'grading') ? 'text-primary fw-semibold' : 'text-dark'; ?>">
+                🏷️ Grading Criteria
+              </a>
+              <a href="#" class="d-block py-1 px-3 text-decoration-none text-dark" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+                📊 Class Reports
+              </a>
+              <a href="" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'report') ? 'text-primary fw-semibold' : 'text-dark'; ?>">
+                👥 Student Reports
+              </a>
+              
+            </div>
+        </li>
+
 
       <!-- Communication Dropdown -->
       <li>
@@ -126,12 +142,20 @@ function navItem($page, $label, $icon, $currentPage) {
       </li>
 
       <!-- Settings -->
-      <li>
-        <a href="schooladmin.php?page=settings" class="d-flex align-items-center px-3 py-2 text-decoration-none <?= ($currentPage === 'settings') ? 'bg-primary text-white fw-semibold' : 'text-dark'; ?>">
-          <i class="fa-solid fa-gear me-2"></i>
-          <span>Settings</span>
-        </a>
+     <li>
+      <a class="d-flex align-items-center px-3 py-2 text-decoration-none text-dark <?= in_array($currentPage, ['settings-general', 'settings-report', 'settings-communication']) ? '' : 'collapsed' ?>"
+        data-bs-toggle="collapse" href="#settingsMenu" aria-expanded="<?= in_array($currentPage, ['settings-general', 'settings-report', 'settings-communication']) ? 'true' : 'false' ?>">
+        <i class="fa-solid fa-gear me-2"></i>
+        <span>Settings</span>
+        <i class="fa-solid fa-chevron-down ms-auto small"></i>
+      </a>
+        <div class="collapse ps-3 <?= in_array($currentPage, ['settings-general', 'settings-report', 'settings-communication']) ? 'show' : '' ?>" id="settingsMenu">
+          <a href="schooladmin.php?page=settings-general" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'settings-general') ? 'text-primary fw-semibold' : 'text-dark'; ?>">⚙️ General Settings</a>
+          <a href="schooladmin.php?page=settings-report" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'settings-report') ? 'text-primary fw-semibold' : 'text-dark'; ?>">📄 Report Settings</a>
+          <a href="schooladmin.php?page=settings-communication" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage === 'settings-communication') ? 'text-primary fw-semibold' : 'text-dark'; ?>">📢 Communication Settings</a>
+        </div>
       </li>
+
     </ul>
   </div>
   <!-- Overlay for mobile -->

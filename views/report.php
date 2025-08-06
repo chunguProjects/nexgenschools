@@ -1,150 +1,156 @@
 <?php
-ob_start(); // Start output buffering
+$totalMarks = 0;
+$subjectCount = 1;
 
-require_once('../vendor/tecnickcom/tcpdf/tcpdf.php');  // Include TCPDF library
-include('../config/db.php');   // Database connection
-include('../model/student.php'); // Student model
-include('../model/class.php');   // Class model
-include('../model/grades.php');  // Grades model
-include('../model/exam.php');    // Exam model
-include('../model/subject.php'); // Subject model
-
-// Get POST data
-$class_id = $_POST['class_id'] ?? null;
-$term = $_POST['term'] ?? null;
-
-if (!$class_id || !$term) {
-    die('Class ID and Term are required');
+// Filter only subjects with grades
+$gradedSubjects = [];
+foreach ($subjects as $subject) {
+    $subjectId = $subject['subject_id'];
+    if (!empty($grades[$student['student_id']][$subjectId])) {
+        $gradedSubjects[] = $subject;
+    }
 }
 
-// Fetch class details
-$classModel = new ClassGroup($conn);
-$classDetails = $classModel->getClassById($class_id);
+// Handle logo
 
-// Fetch students in the selected class
-$studentModel = new Student($conn);
-$students = $studentModel->getStudentsByClass($class_id);
+$settings = $student['settings'] ?? [];
+$logoPath = $settings['logo_path'] ?? null;
+$logoUrl = '/nexgenschools/' . ltrim($logoPath, '/');
+$logoFullPath = $logoPath ? __DIR__ . '/../' . ltrim($logoPath, '/') : null;
 
-// Fetch exam details based on the term
-$examModel = new Exams($conn);
-$examDetails = $examModel->getExamByTerm($term);
+?>
 
-// Fetch grades for the class and term
-$gradesModel = new Grades($conn);
-$grades = $gradesModel->getGradesByClassTerm($class_id, $term);
 
-// Fetch subjects for the class
-$subjectModel = new Subjects($conn);
-$subjects = $subjectModel->getSubjectsByClass($class_id);
 
-// Get class details
-$gradingLevel = $classModel->determineGradingLevel($classDetails['name']);
+<style>
+body { font-size: 12px; }
+.report-container {
+    border: 2px solid #000;
+    padding: 10px 0;
+    width: 670px;
+    height: 950px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.header {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 2px; /* ✅ Add this to reduce bottom spacing */
+}
 
-// Get grading criteria from database
-$gradingQuery = "SELECT * FROM grading_criteria WHERE level = ? ORDER BY min_marks DESC";
-$gradingStmt = $conn->prepare($gradingQuery);
-$gradingStmt->bind_param("s", $gradingLevel);
-$gradingStmt->execute();
-$gradingResult = $gradingStmt->get_result();
-$gradingCriteria = $gradingResult->fetch_all(MYSQLI_ASSOC);
+.header-logo img {
+    width: 45px; /* ✅ Reduced from 60px */
+    height: 45px;
+    object-fit: contain;
+    margin-bottom: 3px; /* ✅ Reduce spacing under logo */
+}
 
-// Create a new PDF document
-$pdf = new TCPDF();
+.school-name {
+    font-size: 16px; /* ✅ Slightly smaller */
+    font-weight: bold;
+    margin: 2px 0 1px 0; /* ✅ Minimize vertical space */
+    line-height: 1.1;
+}
 
-// Set document information
-$pdf->SetCreator('School System');
-$pdf->SetTitle('School Report');
+.school-meta {
+    font-size: 11px;
+    margin: 1px 0;
+    line-height: 1.2;
+}
 
-// ... (previous code remains the same)
+.report-title {
+    font-weight: bold;
+    font-size: 13px;
+    margin: 3px 0 0 0;
+    text-transform: uppercase;
+}
 
-// Loop through each student and generate their report
-foreach ($students as $student) {
-    // Determine if the student passed or failed
-    $passFailStatus = getPassFailStatus($student['student_id'], $grades, $subjects);
-    
-    // Add a page for each student
-    $pdf->AddPage();
+.header-right {width: 20%;}
+.header td { vertical-align: middle; }
+.student-info { padding-bottom: 10px; }
+.student-info table { width: 100%; border-collapse: collapse; }
 
-    // Set font
-    $pdf->SetFont('helvetica', '', 12);
+.grades-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+.grades-table th, .grades-table td {
+    border: 1px solid #000;
+    padding: 2px;
+    text-align: left;
+}
+.grades-table th { background-color: #f5f5f5; }
 
-    // HTML content for each student
-    $html = '
-    <style>
-    body { font-size: 12px; }
-    .report-container {
-        border: 2px solid #000;
-        padding: 10px 0; /* Remove side padding to align tables with edge */
-        width: 670px;
-    }
-    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
-    .header table { width: 100%; }
-    .school-name { font-size: 18px; font-weight: bold; }
-    .student-info { padding-bottom: 10px; }
-    .student-info table { width: 100%; border-collapse: collapse; }
-  
-    .grades-table th, .grades-table td {
-        border: 1px solid #000;
-        padding: 2px;
-        text-align: left;
-    }
-    .sno { width: 7%; font-weight: bold;}
-    .subject { width: 27%; text-align: left !important; padding-left: 5px;font-weight: bold; }
-    .marks { width: 8%; font-weight: bold;}
-    .grade { width: 8%; font-weight: bold;}
-    .remarks { width: 20%; padding-top: 10px; font-weight: bold;}
-    .teacher { width: 30%; font-weight: bold; }
-    .signature, .form-remarks, .grading-criteria {
-        margin-left: 0;
-        margin-right: 0;
-        padding-left: 0;
-        padding-right: 0;
-    }
-    .signature table,
-    .form-remarks table,
-    .grading-criteria table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+.sno { width: 7%; }
+.subject { width: 35%; padding-left: 5px; }
+.marks { width: 10%; }
+.grade { width: 10%; }
+.remarks { width: 18%; }
+.teacher { width: 20%; }
+
+table.signature, table.form-remarks, table.grading-criteria {
+    width: 100%;
+    border-collapse: collapse;
+}
+.fee-structure th, .fee-structure td {
+    border: 1px solid #000;
+    padding: 6px;
+    font-size: 12px;
+}
+
 </style>
 
-    <div class="report-container">
-        <div class="header">
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="width: 20%; vertical-align: middle; text-align: center;">
-                        <img src="' . realpath(__DIR__ . '/../images/logo.jpg') . '" style="width: 100px; height: 100px;">
-                    </td>
-                    <td style="width: 60%; text-align: center; vertical-align: middle;">
-                        <p style="font-size: 18px; font-weight: bold; margin: 0;">CHUNGU FOUNDATION PRIVATE SECONDARY SCHOOL</p>
-                        <p style="margin: 0;">P.O. Box 123, Limbe</p>
-                        <p style="font-weight: bold; margin: 5px 0 0 0;">SCHOOL PROGRESS REPORT</p>
-                    </td>
-                    <td style="width: 20%;"></td>
-                </tr>
-            </table>
-        </div>;
+<div class="report-container">
+    <!-- HEADER -->
+<div class="header">
+    <div class="header-logo">
+        <?php if (file_exists($logoFullPath)): ?>
+            <img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo">
+        <?php endif; ?>
+    </div>
 
-        <div class="student-info">
-            <table style="border: none; width: 100%;">
-                <tr>
-                    <td style="border: none; text-align: left;"><strong>Student Name:</strong> ' . $student['first_name'] . ' ' . $student['last_name'] . '</td>
-                    
-                    <td style="border: none; text-align: center;" colspan="2"><strong>Academic Year:</strong> ' . date('Y') . '</td>
-                </tr>
-                <tr>
-                    <td style="border: none; text-align: left;"><strong>Term:</strong> ' . $term . '</td>
-                     
-                    <td style="border: none; text-align: center;" colspan="2"><strong>No of Students:</strong> ' . count($students) . '</td>
-                </tr>
-                <tr>
-                    <td style="border: none; text-align: left;"><strong>Class: </strong> ' . $classDetails['name'] . '</td>
-                    <td style="border: none; text-align: center;"><strong>Sex: </strong> ' . $student['gender'] . '</td>
-                    <td style="border: none; text-align: center;" colspan="2"><strong>Position in Class</strong>30</td>
-                </tr>
-            </table>
-        </div>
-    <table class="grades-table" style="width: 100%; border-collapse: collapse; margin-bottom:20px;">
+    <p class="school-name"><?= htmlspecialchars($student['school_name'] ?? 'SCHOOL NAME') ?></p>
+    
+    <p class="school-meta">
+        <?= htmlspecialchars($settings['address'] ?? '') ?><br>
+        Email: <?= htmlspecialchars($settings['contact_email'] ?? '') ?><br>
+        Phone: <?= htmlspecialchars($settings['contact_phone'] ?? '') ?>
+    </p>
+
+    <p class="report-title">School Progress Report</p>
+</div>
+
+
+
+
+    <!-- STUDENT INFO -->
+    <div class="student-info">
+        <table>
+            <tr>
+                <td><strong>Student Name:</strong> <?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?></td>
+                <td colspan="2" style="text-align: center;"><strong>Academic Year:</strong> <?= htmlspecialchars($student['academic_year'] ?? '-') ?></td>
+            </tr>
+            <tr>
+                <td><strong>Term:</strong> <?= htmlspecialchars($term) ?></td>
+                <td colspan="2" style="text-align: center;"><strong>No of Students:</strong> <?= count($students) ?></td>
+            </tr>
+            <tr>
+    <td><strong>Exam:</strong> <?= htmlspecialchars($student['exam_name'] ?? '-') ?></td>
+    <td colspan="2" style="text-align: center;"></td>
+</tr>
+            <tr>
+                <td><strong>Class:</strong> <?= htmlspecialchars($student['class_name'] ?? 'N/A') ?></td>
+                <td colspan="2" style="text-align: center;"><strong>Position in Class:</strong> 30</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- GRADES TABLE -->
+    <table class="grades-table">
+        <thead>
             <tr>
                 <th class="sno">S.No</th>
                 <th class="subject">Subject</th>
@@ -152,202 +158,151 @@ foreach ($students as $student) {
                 <th class="grade">Grade</th>
                 <th class="remarks">Remarks</th>
                 <th class="teacher">Teacher</th>
-            </tr>';
+            </tr>
+        </thead>
+        <tbody>
+        <?php for ($i = 0; $i < 15; $i++): ?>
+            <?php
+            $subjectName = $marks = $grade = $remark = $teacherName = '';
+            if (isset($gradedSubjects[$i])) {
+                $subject = $gradedSubjects[$i];
+                $subjectId = $subject['subject_id'];
+                $subjectName = htmlspecialchars($subject['subject_name']);
+                $gradeInfo = $grades[$student['student_id']][$subjectId];
+                $marks = $gradeInfo['marks'];
+                $totalMarks += $marks;
+                $gradeRemark = getGradeRemarkByMarks($marks, $gradingCriteria);
+                $grade = $gradeRemark['grade'];
+                $remark = $gradeRemark['remark'];
+                $teacherName = htmlspecialchars($subject['teacher_name']);
+            }
+            ?>
+            <tr>
+                <td class="sno"><?= $subjectCount ?></td>
+                <td class="subject"><?= $subjectName ?></td>
+                <td class="marks"><?= $marks ?></td>
+                <td class="grade"><?= $grade ?></td>
+                <td class="remarks"><?= $remark ?></td>
+                <td class="teacher"><?= $teacherName ?></td>
+            </tr>
+        <?php $subjectCount++; endfor; ?>
 
-$subjectCount = 1; 
-$totalMarks = 0;
+        <?php
+        $level = $student['level'];
+        $gradedCount = count($gradedSubjects);
+        $averageMarks = $gradedCount > 0 ? round($totalMarks / $gradedCount, 2) : 0;
 
-for ($i = 0; $i < 15; $i++) {
-    $remark = ''; // Reset remark
-    $teacherName = ''; // Reset teacher name
+        $displayGrade = '-';
+        $totalPoints = '-';
 
-    if (isset($subjects[$i])) {
-        $subject = $subjects[$i];
-        $subjectId = $subject['subject_id'];
-        $subjectName = $subject['subject_name'];
-
-        $studentGrade = $grades[$student['student_id']][$subjectId] ?? null;
-
-        if ($studentGrade) {
-            $marks = $studentGrade['marks'] ?? 0;
-            $totalMarks += $marks;
-
-            $gradeRemark = getGradeRemarkByMarks($marks, $gradingCriteria);
-            $grade = $gradeRemark['grade'];
-            $remark = $gradeRemark['remark'];
-
-            $teacherName = $subject['teacher_name']; // Only assign when marks exist
-        } else {
-            $marks = '-';
-            $grade = '-';
+        if ($level === 'JCE') {
+            $displayGrade = $gradedCount >= 6 ? getOverallGrade($averageMarks, $gradingCriteria) : '< 6 subjects';
         }
 
-    } else {
-        // Empty row if no subject
-        $subjectName = '';
-        $marks = '';
-        $grade = '';
-        $remark = '';
-        $teacherName = '';
-    }
-
-    $html .= "<tr>
-                <td class='sno'>$subjectCount</td>
-                <td class='subject'>$subjectName</td>
-                <td class='marks'>$marks</td>
-                <td class='grade'>$grade</td>
-                <td class='remarks'>$remark</td>
-                <td class='teacher'>$teacherName</td>
-              </tr>";
-
-    $subjectCount++;
-}
-
-
-// Total/Aggregate row
-$html .= "<tr>
-            <td class='marks'></td>
-            <td colspan='2' style='text-align: right;'><strong>Aggregate</strong></td>
-            <td><strong>$totalMarks</strong></td>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
-   </table>
-        <br><br>";
-
-
-$html .= '
-<table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
-    <tr>
-        <td colspan="2" style="border: 1px solid #000; padding: 5px; width: 20%; vertical-align: top;"><strong>Form Teacher Remarks</strong></td>
-        <td colspan="2" style="border: 1px solid #000; padding: 5px; vertical-align: top; width: 80%;">is good student</td>
-    </tr>
-    <tr>
-        <td colspan="2" style="border: 1px solid #000; padding: 5px; width: 20%; vertical-align: top;"><strong>Head Teacher Remarks</strong></td>
-        <td colspan="2" style="border: 1px solid #000; padding: 5px; vertical-align: top; width: 80%;">has done well</td>
-    </tr>
-    <tr>
-        <td style="border: 1px solid #000; padding: 5px; width: 25%;"><strong>Closing Date</strong></td>
-        <td style="border: 1px solid #000; padding: 5px; width: 25%;">20 June, 2025</td>
-        <td style="border: 1px solid #000; padding: 5px; width: 25%;"><strong>Head Teacher\'s Name</strong></td>
-        <td style="border: 1px solid #000; padding: 5px; width: 25%;"></td>
-    </tr>
-    <tr>
-        <td style="border: 1px solid #000; padding: 5px;"><strong>Opening Date</strong></td>
-        <td style="border: 1px solid #000; padding: 5px;">16 September, 2025</td>
-        <td style="border: 1px solid #000; padding: 5px;"><strong>Head Teacher\'s Signature</strong></td>
-        <td style="border: 1px solid #000; padding: 5px;"></td>
-    </tr>
-    <tr>
-        <td style="border: 1px solid #000; padding: 5px; vertical-align: top;"><strong>Grading Criteria</strong></td>
-        <td colspan="3" style="border: 1px solid #000; padding: 0;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>';
-
-foreach ($gradingCriteria as $index => $criteria) {
-    $isLast = $index === array_key_last($gradingCriteria);
-    $html .= '
-                    <td style="border-right: ' . ($isLast ? 'none' : '1px solid #000') . ';  
-                                padding: 3px; 
-                                font-size: 10px; 
-                                text-align: center;">
-                        ' . htmlspecialchars($criteria['grade']) . ' (' . 
-                            htmlspecialchars($criteria['min_marks']) . '-' . 
-                            htmlspecialchars($criteria['max_marks']) . ')
-                    </td>';
-}
-
-$html .= '
-                </tr>
-            </table>
-        </td>
-    </tr>
-</table>';
-
-
-// Get current margins
-$left = $pdf->getMargins()['left'];
-$top = $pdf->getMargins()['top'];
-$right = $pdf->getPageWidth() - $pdf->getMargins()['right'];
-$bottom = $pdf->getPageHeight() - $pdf->getMargins()['bottom'];
-
-// Draw a rectangle (x, y, width, height)
-$pdf->Rect($left, $top, $right - $left, $bottom - $top, 'D');
-
-
-    // Write student-specific HTML to the PDF
-    $pdf->writeHTML($html, true, false, true, false, '');
-}
-
-// Output the PDF to the browser
-ob_end_clean(); // Clear any previous output to avoid conflicts
-$pdf->Output('school_report.pdf', 'I');
-
-// Helper function to check pass/fail status
-function getPassFailStatus($student_id, $grades, $subjects)
-{
-    $passedSubjects = 0;
-    $englishPassed = false;
-
-    // Loop through subjects and grades for the student
-    foreach ($subjects as $subject) {
-        $subjectId = $subject['subject_id'];
-        $studentGrade = $grades[$student_id][$subjectId] ?? null;
-
-        // If the student has a grade, check if it's a passing grade
-        if ($studentGrade) {
-            $marks = $studentGrade['marks'];
-            $grade = $studentGrade['grade'];
-
-    
-            // Check if the subject is English and if the student passed
-            if (strtolower($subject['subject_name']) == 'english' && isPassingGrade($marks)) {
-                $englishPassed = true;
-            }
-
-            // Increment passed subjects if the student passed
-            if (isPassingGrade($marks)) {
-                $passedSubjects++;
+        if ($level === 'MSCE') {
+            if ($gradedCount >= 6) {
+                $pointsArray = [];
+                foreach ($gradedSubjects as $subject) {
+                    $marks = $grades[$student['student_id']][$subject['subject_id']]['marks'];
+                    $gradeInfo = getGradeRemarkByMarks($marks, $gradingCriteria);
+                    $gradeValue = is_numeric($gradeInfo['grade']) ? (int)$gradeInfo['grade'] : null;
+                    if ($gradeValue !== null) {
+                        $pointsArray[] = $gradeValue;
+                    }
+                }
+                if (count($pointsArray) >= 6) {
+                    sort($pointsArray);
+                    $totalPoints = array_sum(array_slice($pointsArray, 0, 6));
+                } else {
+                    $totalPoints = '< 6 subjects';
+                }
+            } else {
+                $totalPoints = '< 6 subjects';
             }
         }
-    }
+        ?>
+        <tr>
+            <td colspan="2" style="text-align: right; border: 1px solid #000; padding: 5px;"><strong>Aggregate</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><strong><?= $totalMarks ?></strong></td>
+            <td colspan="2" style="border: 1px solid #000; padding: 5px;">
+                <?php if ($level === 'JCE'): ?>
+                    <strong>Grade: <?= htmlspecialchars($displayGrade) ?></strong>
+                <?php elseif ($level === 'MSCE'): ?>
+                    <strong>Points: <?= htmlspecialchars($totalPoints) ?></strong>
+                <?php else: ?>
+                    <strong>-</strong>
+                <?php endif; ?>
+            </td>
+            <td style="border: 1px solid #000; padding: 5px;">
+                <strong>Status: <?= htmlspecialchars(getPassFailStatus($student['student_id'], $grades, $gradedSubjects)) ?></strong>
+            </td>
+        </tr>
+        </tbody>
+    </table>
 
+    <!-- REMARKS & FOOTER -->
+    <?php
+    $teacherRemarks = getTeacherRemarksByAverage($averageMarks, $gradingCriteria);
+    $formTeacherRemark = $teacherRemarks['form_teacher'];
+    $headTeacherRemark = $teacherRemarks['head_teacher'];
+    ?>
 
-    // Return pass/fail status
-    if ($passedSubjects >= 6 && $englishPassed) {
-        return 'Passed';
-    } else {
-        return 'Failed';
-    }
-}
+    <table>
+        <tr>
+            <td colspan="2" style="border: 1px solid #000; padding: 5px;"><strong>Form Teacher Remarks</strong></td>
+            <td colspan="2" style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($formTeacherRemark) ?></td>
+        </tr>
+        <tr>
+            <td colspan="2" style="border: 1px solid #000; padding: 5px;"><strong>Head Teacher Remarks</strong></td>
+            <td colspan="2" style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($headTeacherRemark) ?></td>
+        </tr>
+        <tr>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Closing Date</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['closing_date'] ?? '-') ?></td>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Head Teacher's Name</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['head_teacher_name'] ?? '') ?></td>
+        </tr>
+        <tr>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Opening Date</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['opening_date'] ?? '-') ?></td>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Head Teacher's Signature</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"></td>
+        </tr>
+        <tr>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Grading Criteria</strong></td>
+            <td colspan="3" style="border: 1px solid #000; padding: 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <?php foreach ($gradingCriteria as $criteria): ?>
+                            <td style="border-right: 1px solid #000; padding: 3px; font-size: 10px; text-align: center;">
+                                <?= htmlspecialchars($criteria['grade']) ?>
+                                (<?= $criteria['min_marks'] . '-' . $criteria['max_marks'] ?>)
+                            </td>
+                        <?php endforeach; ?>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 
-// Helper function to check if a grade is passing (e.g., grade C or higher)
-function isPassingGrade($marks)
-{
-    return $marks >= 40; // Assuming passing marks are 50 and above
-}
-
-
-
-// Function to determine the overall grade
-function getOverallGrade($totalMarks, $gradingCriteria) {
-    foreach ($gradingCriteria as $criteria) {
-        if ($totalMarks >= $criteria['min_marks'] && $totalMarks <= $criteria['max_marks']) {
-            return $criteria['grade'];
-        }
-    }
-    return 'N/A'; // Default if no match is found
-}
-function getGradeRemarkByMarks($marks, $gradingCriteria) {
-    foreach ($gradingCriteria as $criteria) {
-        if ($marks >= $criteria['min_marks'] && $marks <= $criteria['max_marks']) {
-            return [
-                'grade' => $criteria['grade'],
-                'remark' => $criteria['description']
-            ];
-        }
-    }
-    return ['grade' => '-', 'remark' => ''];  // default if no match
-}
-?>
+    <!-- FEE STRUCTURE -->
+    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <tr>
+            <td colspan="4" style="border: 1px solid #000; padding: 5px; background-color: #f2f2f2;">
+                <strong>Fee Structure</strong>
+            </td>
+        </tr>
+        <tr>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Boarding Students</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['fee_boarding'] ?? '-') ?></td>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Self-Boarding Students</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['fee_self_boarding'] ?? '-') ?></td>
+        </tr>
+        <tr>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Uniform & ID Card</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['fee_uniform'] ?? '-') ?></td>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Registration Fee</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['fee_registration'] ?? '-') ?></td>
+        </tr>
+    </table>
+</div>

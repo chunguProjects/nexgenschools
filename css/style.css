@@ -219,3 +219,11 @@ h4 {
 .footer a:hover {
     color: #0056b3;
 }
+
+#generateReportModal .modal-dialog {
+  max-width: 500px;
+  height: 40vh; /* 40% of viewport height */
+}
+#generateReportModal .modal-content {
+  height: 100%;
+}

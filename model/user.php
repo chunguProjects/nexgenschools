@@ -1,6 +1,4 @@
 <?php
-// models/User.php
-
 class User {
     private $conn;
 
@@ -30,7 +28,7 @@ class User {
         return $stmt->execute();
     }
 
-    // Get all users for a specific school
+    // Get all users for a specific school (all roles)
     public function getAllUsers($school_id) {
         $query = "
             SELECT u.*, r.name AS role_name 
@@ -45,6 +43,22 @@ class User {
         return $stmt->get_result();
     }
 
+    // Get users by role name (e.g., 'teacher', 'student', 'schooladmin')
+public function getUsersByRoleId($school_id, $role_id) {
+    $query = "
+        SELECT u.*, r.name AS role_name 
+        FROM users u
+        JOIN roles r ON u.role_id = r.role_id
+        WHERE u.school_id = ? AND u.role_id = ?
+        ORDER BY u.full_name
+    ";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bind_param("ii", $school_id, $role_id);
+    $stmt->execute();
+    return $stmt->get_result();
+}
+
+
     // Delete user by ID
     public function deleteUser($userId) {
         $query = "DELETE FROM users WHERE user_id = ?";
@@ -53,7 +67,7 @@ class User {
         return $stmt->execute();
     }
 
-    // Get user by ID (optional for editing)
+    // Get user by ID
     public function getUserById($userId) {
         $query = "SELECT * FROM users WHERE user_id = ?";
         $stmt = $this->conn->prepare($query);
@@ -62,7 +76,7 @@ class User {
         return $stmt->get_result()->fetch_assoc();
     }
 
-    // Update user basic details (optional)
+    // Update user basic details
     public function updateUser($userId, $fullName, $email, $phoneNumber) {
         $query = "UPDATE users SET full_name = ?, email = ?, phone_number = ? WHERE user_id = ?";
         $stmt = $this->conn->prepare($query);

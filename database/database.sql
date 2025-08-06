@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS schools (
     school_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
-     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. ROLES
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255),
     role_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    password_updated BOOLEAN NOT NULL DEFAULT 0;
+    password_updated BOOLEAN NOT NULL DEFAULT 0,
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE SET NULL,
@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS classes (
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
+
+    UNIQUE KEY uniq_class_per_school (school_id, name),
     INDEX idx_school_class (school_id)
 );
 
@@ -71,14 +73,19 @@ CREATE TABLE IF NOT EXISTS subjects (
     subject_id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL,
     subject_name VARCHAR(100) NOT NULL,
-    subject_code VARCHAR(20) UNIQUE NOT NULL,
-    teacher_id INT,
+    subject_code VARCHAR(20) NOT NULL,
+    teacher_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
+
+    UNIQUE KEY uq_school_subject_name (school_id, subject_name),
+    UNIQUE KEY uq_school_subject_code (school_id, subject_code),
+
     INDEX idx_school_subject (school_id)
 );
+
 
 -- 8. STUDENTS
 CREATE TABLE IF NOT EXISTS students (
@@ -89,8 +96,11 @@ CREATE TABLE IF NOT EXISTS students (
     gender ENUM('Male', 'Female') NOT NULL,
     class_id INT,
     date_of_birth DATE,
+    is_deleted TINYINT(1) NOT NULL DEFAULT 0
     contact_number VARCHAR(15),
     address TEXT,
+    username VARCHAR(255),
+    password VARCHAR (255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
@@ -103,14 +113,16 @@ CREATE TABLE IF NOT EXISTS students (
 CREATE TABLE IF NOT EXISTS exams (
     id INT AUTO_INCREMENT PRIMARY KEY,
     school_id INT NOT NULL,
-    exam_name VARCHAR(100),
-    term VARCHAR(50),
-    academic_year VARCHAR(9) CHECK (academic_year LIKE '____-____'),
+    exam_name VARCHAR(100) NOT NULL,
+    term VARCHAR(50) NOT NULL,
+    academic_year VARCHAR(9) NOT NULL CHECK (academic_year LIKE '____-____'),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
+    UNIQUE KEY uq_exam_per_school (school_id, exam_name, term, academic_year),
     INDEX idx_school_exam (school_id)
 );
+
 
 -- 10. GRADES
 CREATE TABLE IF NOT EXISTS grades (
@@ -144,6 +156,8 @@ CREATE TABLE IF NOT EXISTS grading_criteria (
     min_marks INT NOT NULL,
     max_marks INT NOT NULL,
     description VARCHAR(255) NOT NULL,
+    form_teacher_remark VARCHAR(255),
+    head_teacher_remark VARCHAR(255),
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
     INDEX idx_school_level (school_id, level)
@@ -175,16 +189,67 @@ CREATE TABLE IF NOT EXISTS school_settings (
     motto VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS report_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    school_id INT NOT NULL UNIQUE,
+    opening_date DATE,
+    closing_date DATE,
+    head_teacher_name VARCHAR(255),
+    fee_boarding INT,
+    fee_self_boarding INT,
+    fee_uniform INT,
+    fee_registration INT,
+    include_fees BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE IF NOT EXISTS communication_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    school_id INT NOT NULL UNIQUE,
+    whatsapp_number VARCHAR(20),
+    sms_sender_id VARCHAR(20),
+    notification_email VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE
+);
+
+CREATE TABLE class_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    FOREIGN KEY (class_id) REFERENCES classes(class_id),
+    FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
+    UNIQUE (class_id, subject_id)
+);
+
+-- 18. CLASS-SUBJECT-TEACHER LINK
+CREATE TABLE class_subject_teacher (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    school_id INT NOT NULL,
+    class_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    teacher_id INT NOT NULL,
+    FOREIGN KEY (school_id) REFERENCES schools(school_id) ON DELETE CASCADE,
+    FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE (class_id, subject_id)
 );
 -- ROLES
 INSERT INTO roles (name, description) VALUES
 ('superadmin', 'System owner with full access to everything'),
 ('schooladmin', 'Manages a single school – students, classes, users, etc.'),
 ('teacher', 'Manages assigned subjects, students, and grades'),
-('parent', 'Views only their child’s grades and reports');
-
+('student', 'Can view their own grades and reports');
 -- PERMISSIONS
 INSERT INTO permissions (name, description) VALUES
 ('manage_schools', 'Can add or remove schools'),
@@ -226,3 +291,26 @@ SELECT r.role_id, p.permission_id
 FROM roles r, permissions p
 WHERE r.name = 'parent'
   AND p.name = 'view_own_child';
+
+  INSERT INTO users (
+    school_id,
+    full_name,
+    country_code,
+    phone_number,
+    username,
+    email,
+    password,
+    role_id,
+    password_updated
+) VALUES (
+    NULL,
+    'System SuperAdmin',
+    '+265',
+    '0999000000',
+    'superadmin',
+    'superadmin@example.com',
+    '12345678',
+    1,
+    0
+);
+

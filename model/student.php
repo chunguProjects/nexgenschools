@@ -1,163 +1,152 @@
 <?php
 class Student {
     private $conn;
+    private $parentCredentials = [];
 
     public function __construct($db) {
         $this->conn = $db;
     }
 
-    /**
-     * Add multiple students with parent user creation and linking
-     * @param array $students Array of students with parent info
-     * @return array ['success' => bool, 'message' => string]
-     */
-   public function addStudentsWithParents(array $students) {
-    // Begin transaction for consistency
-    $this->conn->begin_transaction();
+    public function getParentCredentials(): array {
+        return $this->parentCredentials;
+    }
 
-    try {
-        // Prepare insert statement for students
-        $studentQuery = "
-            INSERT INTO students (first_name, last_name, gender, class_id, school_id, contact_number)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ";
-        $stmtStudent = $this->conn->prepare($studentQuery);
+    public function addStudentsWithParents(array $students) {
+        $this->conn->begin_transaction();
 
-        // Prepare select and insert for parent user
-        $selectParentQuery = "SELECT user_id FROM users WHERE phone_number = ? LIMIT 1";
-        $stmtSelectParent = $this->conn->prepare($selectParentQuery);
+        try {
+            $studentQuery = "
+                INSERT INTO students (first_name, last_name, gender, class_id, school_id, contact_number, date_of_birth, username, password)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ";
+            $stmtStudent = $this->conn->prepare($studentQuery);
+            $accountList = [];
 
-        $insertParentQuery = "
-            INSERT INTO users (school_id, full_name, phone_number, username, password, role_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
-        ";
-        $stmtInsertParent = $this->conn->prepare($insertParentQuery);
+            foreach ($students as $s) {
+                if (empty($s['first_name']) || empty($s['gender']) || empty($s['parent_phone'])) {
+                    throw new Exception("Missing required student or parent data.");
+                }
 
-        // Prepare insert for parent-student link
-        $insertLinkQuery = "
-            INSERT INTO parent_student (parent_id, student_id, relationship, created_at)
-            VALUES (?, ?, ?, NOW())
-        ";
-        $stmtInsertLink = $this->conn->prepare($insertLinkQuery);
+                $schoolId = $_SESSION['user']['school_id'] ?? null;
+                if (!$schoolId) throw new Exception("School ID missing in session.");
 
-        foreach ($students as $s) {
-            // Validate minimal required fields
-            if (empty($s['first_name']) || empty($s['gender']) || empty($s['parent_phone'])) {
-                throw new Exception("Missing required student or parent data.");
-            }
+                $firstName = trim($s['first_name']);
+                $lastName  = trim($s['last_name'] ?? '');
+                $gender    = $s['gender'];
+                $classId   = $s['class_id'];
+                $dob       = $s['date_of_birth'] ?? null;
+                $parentPhone = trim($s['parent_phone']);
+                $relationship = $s['relationship'] ?? 'Parent';
+                $contactNumber = $parentPhone;
 
-            // Assume school_id from session or passed in $s
-            $schoolId = $_SESSION['user']['school_id'] ?? null;
-            if (!$schoolId) {
-                throw new Exception("School ID missing in session.");
-            }
-
-            $firstName = $s['first_name'];
-            $lastName = $s['last_name'] ?? '';
-            $gender = $s['gender'];
-            $classId = $s['class_id'];
-            $parentPhone = $s['parent_phone'];
-            $relationship = $s['relationship'] ?? 'Parent';
-            $contactNumber = $parentPhone; // Store parent's phone as student's contact
-
-            // 1. Insert student
-            $stmtStudent->bind_param("sssiss", $firstName, $lastName, $gender, $classId, $schoolId, $contactNumber);
-            if (!$stmtStudent->execute()) {
-                throw new Exception("Failed to insert student: " . $stmtStudent->error);
-            }
-            $studentId = $stmtStudent->insert_id;
-
-           $parentId = null;
-$stmtSelectParent->bind_param("s", $parentPhone);
-$stmtSelectParent->execute();
-$stmtSelectParent->store_result();
-
-        // Declare $fetchedParentId before binding
-        $fetchedParentId = null;
-
-        if ($stmtSelectParent->num_rows > 0) {
-            $stmtSelectParent->bind_result($fetchedParentId);
-            if ($stmtSelectParent->fetch()) {
-                $parentId = $fetchedParentId;
-            } else {
-                throw new Exception("Parent found but couldn't fetch ID.");
-            }
-                    } else {
-                // 3. Create new parent
-                $parentFullName = "Parent of $firstName $lastName";
                 $username = $parentPhone;
-                $defaultPassword = password_hash('changeme123', PASSWORD_DEFAULT);
+                $plainPassword = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+                $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
 
-                $parentRoleId = $this->getRoleIdByName('parent');
-                if (!$parentRoleId) {
-                    throw new Exception("Parent role not found in roles table.");
-                }
+                $stmtStudent->bind_param("sssisssss", $firstName, $lastName, $gender, $classId, $schoolId, $contactNumber, $dob, $username, $hashedPassword);
+                if (!$stmtStudent->execute()) throw new Exception("Failed to insert student: " . $stmtStudent->error);
 
-                $stmtInsertParent->bind_param("issssi", $schoolId, $parentFullName, $parentPhone, $username, $defaultPassword, $parentRoleId);
-                if (!$stmtInsertParent->execute()) {
-                    throw new Exception("Failed to insert parent user: " . $stmtInsertParent->error);
-                }
+                $this->parentCredentials[] = [
+                    'student_name' => "$firstName $lastName",
+                    'username'     => $username,
+                    'password'     => $plainPassword,
+                    'phone_number' => $parentPhone,
+                ];
 
-                $parentId = $stmtInsertParent->insert_id;
+                $accountList[] = [
+                    'student' => [
+                        'first_name'   => $firstName,
+                        'last_name'    => $lastName,
+                        'date_of_birth'=> $dob,
+                        'username'     => $username,
+                        'raw_password' => $plainPassword,
+                        'phone_number' => $parentPhone,
+                        'parent_name'  => "$relationship of $firstName"
+                    ]
+                ];
             }
 
-            // 4. Link parent to student
-            $stmtInsertLink->bind_param("iis", $parentId, $studentId, $relationship);
-            if (!$stmtInsertLink->execute()) {
-                if ($this->conn->errno == 1062) {
-                    // Duplicate link, ignore silently
-                } else {
-                    throw new Exception("Failed to link parent and student: " . $stmtInsertLink->error);
-                }
+            $this->conn->commit();
+            return ['success' => true, 'accounts' => $accountList];
+        } catch (Exception $ex) {
+            $this->conn->rollback();
+            return ['success' => false, 'message' => $ex->getMessage()];
+        }
+    }
+
+    public function updateStudent(int $studentId, array $data): bool {
+        $fields = [];
+        $params = [];
+        $types = '';
+
+        $allowedFields = ['first_name', 'last_name', 'gender', 'class_id', 'date_of_birth', 'contact_number'];
+
+        foreach ($allowedFields as $field) {
+            if (isset($data[$field])) {
+                $fields[] = "$field = ?";
+                $params[] = $data[$field];
+                $types .= is_int($data[$field]) ? 'i' : 's';
             }
         }
 
-        $this->conn->commit();
-        return ['success' => true];
+        if (empty($fields)) return false;
 
-    } catch (Exception $ex) {
-        $this->conn->rollback();
-        return ['success' => false, 'message' => $ex->getMessage()];
-    }
-}
+        $query = "UPDATE students SET " . implode(', ', $fields) . " WHERE student_id = ?";
+        $params[] = $studentId;
+        $types .= 'i';
 
-
-    /**
-     * Get role ID by role name
-     * @param string $roleName
-     * @return int|null
-     */
-   private function getRoleIdByName(string $roleName): ?int {
-    $query = "SELECT role_id FROM roles WHERE name = ? LIMIT 1";
-    $stmt = $this->conn->prepare($query);
-    if (!$stmt) {
-        return null;
-    }
-    $stmt->bind_param("s", $roleName);
-    if (!$stmt->execute()) {
-        $stmt->close();
-        return null;
-    }
-
-    $roleId = null;            // Initialize before binding
-    $stmt->bind_result($roleId);
-    $found = $stmt->fetch();
-    $stmt->close();
-
-    if ($found && $roleId !== null) {
-        return $roleId;
-    }
-
-    return null;
-}
-
-    public function getStudentsByClass($class_id) {
-        $query = "SELECT student_id, first_name, last_name FROM students WHERE class_id = ?";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $class_id);
+        if (!$stmt) return false;
+
+        $stmt->bind_param($types, ...$params);
+        $success = $stmt->execute();
+        $stmt->close();
+
+        return $success;
+    }
+
+    public function getStudentById(int $studentId): ?array {
+        $query = "SELECT * FROM students WHERE student_id = ? LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $studentId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $student = $result->fetch_assoc();
+        $stmt->close();
+
+        return $student ?: null;
+    }
+
+    public function getStudentsByClass($classId) {
+        $query = "SELECT student_id, first_name, last_name, gender, date_of_birth, contact_number
+                  FROM students WHERE class_id = ? AND is_deleted = 0";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $classId);
         $stmt->execute();
         $result = $stmt->get_result();
         return $result->fetch_all(MYSQLI_ASSOC);
     }
+
+    public function getStudentsBySchool($schoolId) {
+        $query = "SELECT s.*, c.name AS class_name 
+                  FROM students s 
+                  LEFT JOIN classes c ON s.class_id = c.class_id 
+                  WHERE s.school_id = ? AND s.is_deleted = 0";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $schoolId);
+        $stmt->execute();
+        return $stmt->get_result();
+    }
+
+    public function deleteStudent(int $studentId): bool {
+        $query = "UPDATE students SET is_deleted = 1 WHERE student_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $studentId);
+        $success = $stmt->execute();
+        $stmt->close();
+
+        return $success;
+    }
+   
 }
 ?>

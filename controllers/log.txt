@@ -1,0 +1,34 @@
+Array
+(
+    [grade] => Array
+        (
+            [0] => A
+        )
+
+    [min_marks] => Array
+        (
+            [0] => 56
+        )
+
+    [max_marks] => Array
+        (
+            [0] => 60
+        )
+
+    [description] => Array
+        (
+            [0] => Excellent
+        )
+
+    [form_teacher_remark] => Array
+        (
+            [0] => Has done well
+        )
+
+    [head_teacher_remark] => Array
+        (
+            [0] => Keep it up
+        )
+
+    [level] => JCE
+)

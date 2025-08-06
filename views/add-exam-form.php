@@ -1,11 +1,31 @@
+<?php
+include('../config/db.php');
+include('../model/exam.php');
+
+$examModel = new Exams($conn);
+$editing = isset($_GET['exam_id']);
+$exam = $editing ? $examModel->getExamById((int)$_GET['exam_id']) : null;
+
+$examName = $exam['exam_name'] ?? '';
+$term = $exam['term'] ?? '';
+$academicYear = $exam['academic_year'] ?? '';
+?>
+
 <div class="container justify-content-center mt-5">
-    <h4 class="mb-4">Add New Exam</h4>
-    <form action="../controllers/exam-controller.php" method="POST">
+    <h4 class="mb-4"><?= $editing ? 'Edit Exam' : 'Add New Exam' ?></h4>
+    <form action="../controllers/exam-controller.php" method="POST" novalidate>
+        <?php if ($editing): ?>
+            <input type="hidden" name="exam_id" value="<?= $exam['id'] ?>">
+        <?php endif; ?>
+
         <!-- Exam Name Field -->
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label for="exam_name" class="form-label">Exam Name</label>
-                <input type="text" class="form-control" id="exam_name" name="exam_name" required>
+                <input type="text" class="form-control" id="exam_name" name="exam_name" required
+                       value="<?= htmlspecialchars($examName) ?>"
+                       placeholder="Enter exam name">
+                <div class="form-text">E.g., Midterm, Final Exam</div>
             </div>
         </div>
 
@@ -13,7 +33,9 @@
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label for="term" class="form-label">Term</label>
-                <input type="text" class="form-control" id="term" name="term" required>
+                <input type="text" class="form-control" id="term" name="term" required
+                       value="<?= htmlspecialchars($term) ?>"
+                       placeholder="e.g., Term 1, Term 2">
             </div>
         </div>
 
@@ -22,14 +44,17 @@
             <div class="col-md-4 mb-3">
                 <label for="academic_year" class="form-label">Academic Year</label>
                 <select class="form-select" id="academic_year" name="academic_year" required>
-                    <option value="" selected>Select Academic Year</option>
+                    <option value="" disabled <?= !$academicYear ? 'selected' : '' ?>>Select Academic Year</option>
                     <?php
-                    // Generate year range dynamically
-                    $currentYear = date('Y');
-                    $endYear = $currentYear + 5; // Adjust to show desired range
-                    for ($startYear = $currentYear; $startYear <= $endYear; $startYear++) {
-                        $nextYear = $startYear + 1;
-                        echo "<option value='{$startYear}-{$nextYear}'>{$startYear}-{$nextYear}</option>";
+                    $currentYear = (int)date('Y');
+                    $startYear = $currentYear - 1;
+                    $endYear = $currentYear + 4;
+
+                    for ($year = $startYear; $year <= $endYear; $year++) {
+                        $next = $year + 1;
+                        $label = "{$year}-{$next}";
+                        $selected = ($label === $academicYear) ? 'selected' : '';
+                        echo "<option value='{$label}' {$selected}>{$label}</option>";
                     }
                     ?>
                 </select>
@@ -38,8 +63,12 @@
 
         <!-- Submit and Cancel Buttons -->
         <div class="d-flex justify-content-start">
-            <button type="submit" name="add_exam" class="btn btn-warning me-2">Add Exam</button>
-            <a href="index.php?page=exam" class="btn btn-secondary">Cancel</a>
+            <button type="submit"
+                    name="<?= $editing ? 'update_exam' : 'add_exam' ?>"
+                    class="btn btn-primary me-2">
+                <?= $editing ? 'Update Exam' : 'Add Exam' ?>
+            </button>
+            <a href="schooladmin.php?page=exam" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
