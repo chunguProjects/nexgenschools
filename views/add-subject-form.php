@@ -3,12 +3,11 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 include('../config/db.php');
 include('../model/subject.php');
 
-// Ensure user is logged in and has a school_id
-if (!isset($_SESSION['user']['school_id'])) {
+// Ensure user is logged in
+if (!isset($_SESSION['user'])) {
     die("Unauthorized access.");
 }
 
-$schoolId = $_SESSION['user']['school_id'];
 $subjectId = $_GET['subject_id'] ?? null;
 
 $subjectData = [
@@ -71,7 +70,7 @@ $error = $_GET['error'] ?? null;
             <div class="col-md-4 mb-3">
                 <label for="subject_code" class="form-label">Subject Code</label>
                 <input type="text" class="form-control" id="subject_code" name="subject_code"
-                       value="<?= htmlspecialchars($subjectData['subject_code']) ?>" required>
+                       value="<?= htmlspecialchars($subjectData['subject_code']) ?>">
             </div>
         </div>
 
@@ -82,11 +81,8 @@ $error = $_GET['error'] ?? null;
                 <select class="form-select" id="teacher_id" name="teacher_id" required>
                     <option value="" disabled <?= !$subjectData['teacher_id'] ? 'selected' : '' ?>>Select Teacher</option>
                     <?php
-                    $query = "SELECT user_id, full_name FROM users WHERE role_id = 3 AND school_id = ?";
-                    $stmt = $conn->prepare($query);
-                    $stmt->bind_param("i", $schoolId);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
+                    $query = "SELECT user_id, full_name FROM users WHERE role_id = 2";
+                    $result = $conn->query($query);
 
                     while ($teacher = $result->fetch_assoc()):
                         $selected = $teacher['user_id'] == $subjectData['teacher_id'] ? 'selected' : '';
@@ -100,7 +96,7 @@ $error = $_GET['error'] ?? null;
         <!-- Buttons -->
         <div class="d-flex justify-content-start">
             <button type="submit" class="btn btn-primary me-2"><?= $isEdit ? "Update" : "Add" ?> Subject</button>
-            <a href="schooladmin.php?page=subject" class="btn btn-secondary">Cancel</a>
+            <a href="admin.php?page=subject" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

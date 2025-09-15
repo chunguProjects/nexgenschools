@@ -1,44 +1,43 @@
 <?php
 class GradingCriteriaModel {
     private $conn;
-    private $schoolId;
 
-    public function __construct($conn, $schoolId) {
+    public function __construct($conn) {
         $this->conn = $conn;
-        $this->schoolId = $schoolId;
     }
 
     public function getByLevel($level) {
-        $stmt = $this->conn->prepare("SELECT * FROM grading_criteria WHERE school_id = ? AND level = ? ORDER BY min_marks DESC");
-        $stmt->bind_param("is", $this->schoolId, $level);
+        $stmt = $this->conn->prepare("SELECT * FROM grading_criteria WHERE level = ? ORDER BY min_marks DESC");
+        $stmt->bind_param("s", $level);
         $stmt->execute();
         $result = $stmt->get_result();
-        $criteria = [];
-        while ($row = $result->fetch_assoc()) {
-            $criteria[] = $row;
-        }
+        $criteria = $result->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $criteria;
     }
 
     public function deleteByLevel($level) {
-        $stmt = $this->conn->prepare("DELETE FROM grading_criteria WHERE school_id = ? AND level = ?");
-        $stmt->bind_param("is", $this->schoolId, $level);
+        $stmt = $this->conn->prepare("DELETE FROM grading_criteria WHERE level = ?");
+        $stmt->bind_param("s", $level);
         $success = $stmt->execute();
         $stmt->close();
         return $success;
     }
 
-    public function insertCriteriaBatch($criteriaList) {
-        foreach ($criteriaList as $c) {
+   public function saveCriteriaBatch($criteriaList) {
+    foreach ($criteriaList as $c) {
+        if (!empty($c['id'])) {
+            // Update existing row
+            $this->updateCriteria($c['id'], $c);
+        } else {
+            // Insert new row
             $stmt = $this->conn->prepare("
                 INSERT INTO grading_criteria 
-                (school_id, level, grade, min_marks, max_marks, description, form_teacher_remark, head_teacher_remark)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (level, grade, min_marks, max_marks, description, form_teacher_remark, head_teacher_remark)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->bind_param(
-                "issiisss",
-                $this->schoolId,
+                "ssiisss",
                 $c['level'],
                 $c['grade'],
                 $c['min_marks'],
@@ -50,6 +49,31 @@ class GradingCriteriaModel {
             $stmt->execute();
             $stmt->close();
         }
-        return true;
     }
+    return true;
+}
+
+    public function updateCriteria($id, $data) {
+    $stmt = $this->conn->prepare("
+        UPDATE grading_criteria 
+        SET level = ?, grade = ?, min_marks = ?, max_marks = ?, description = ?, 
+            form_teacher_remark = ?, head_teacher_remark = ?
+        WHERE id = ?
+    ");
+    $stmt->bind_param(
+        "ssiisssi",
+        $data['level'],
+        $data['grade'],
+        $data['min_marks'],
+        $data['max_marks'],
+        $data['description'],
+        $data['form_teacher_remark'],
+        $data['head_teacher_remark'],
+        $id
+    );
+    $success = $stmt->execute();
+    $stmt->close();
+    return $success;
+}
+
 }

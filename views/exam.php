@@ -6,81 +6,71 @@ if (session_status() === PHP_SESSION_NONE) {
 include('../config/db.php');
 include('../model/exam.php');
 
-$schoolId = $_SESSION['user']['school_id'] ?? null;
-if (!$schoolId) {
-    echo "<div class='alert alert-danger'>Unauthorized access. School not identified.</div>";
-    exit;
-}
-
 $examModel = new Exams($conn);
-// Assuming getAllExams accepts schoolId to filter by school
-$exams = $examModel->getAllExams($schoolId);
 
+// Get all exams
+$exams = $examModel->getAllExams();
 ?>
-
 
 <div class="container-fluid py-3">
 
- <?php
-   if (isset($_SESSION['flash_message'])) {
+<?php
+if (isset($_SESSION['flash_message'])) {
     $msg = $_SESSION['flash_message'];
     $alertType = $msg['type'] === 'error' ? 'danger' : $msg['type'];
     echo "<div class='alert alert-{$alertType}'>{$msg['text']}</div>";
     unset($_SESSION['flash_message']);
 }
+?>
 
-    ?>
-    <!-- Header + Back + Add -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex align-items-center">
-            <a href="schooladmin.php?page=dashboard" class="btn btn-outline-secondary me-3">
-                <i class="fa fa-arrow-left"></i> Back
-            </a>
-        </div>
-        <a href="schooladmin.php?page=add-exam-form" class="btn btn-primary">
-            <i class="fa-solid fa-plus"></i> Add Exam
-        </a>
+<!-- Header + Add -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="admin.php?page=dashboard" class="btn btn-outline-secondary">
+        <i class="fa fa-arrow-left"></i> Back
+    </a>
+    <a href="admin.php?page=add-exam-form" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Add Exam
+    </a>
+</div>
+
+<!-- Exams Table -->
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Exam List</h5>
     </div>
-
-    <!-- Exams Table -->
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h5 class="card-title mb-0">Exam List</h5>
-        </div>
-        <div class="card-body table-responsive">
-            <table class="table table-bordered table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Exam Name</th>
-                        <th>Term</th>
-                        <th>Academic Year</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($exams)) : ?>
-                        <?php foreach ($exams as $exam) : ?>
-                            <tr>
-                                <td><?= (int)$exam['id'] ?></td>
-                                <td><?= htmlspecialchars($exam['exam_name']) ?></td>
-                                <td><?= htmlspecialchars($exam['term']) ?></td>
-                                <td><?= htmlspecialchars($exam['academic_year']) ?></td>
-                                <td>
-                                    <a href="schooladmin.php?page=add-exam-form&exam_id=<?= (int)$exam['id'] ?>" class="btn btn-sm btn-primary">Edit</a>
-                                    <button class="btn btn-danger deleteExamBtn" data-id="<?= $exam['id'] ?>">Delete</button>
-                                    <a href="schooladmin.php?page=add-grades-form&exam_id=<?= (int)$exam['id'] ?>" class="btn btn-sm btn-success">Add Grades</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else : ?>
+    <div class="card-body table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Exam Name</th>
+                    <th>Term</th>
+                    <th>Academic Year</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (!empty($exams)) : ?>
+                    <?php foreach ($exams as $exam) : ?>
                         <tr>
-                            <td colspan="5" class="text-center">No Exams Found</td>
+                            <td><?= (int)$exam['id'] ?></td>
+                            <td><?= htmlspecialchars($exam['exam_name']) ?></td>
+                            <td><?= htmlspecialchars($exam['term']) ?></td>
+                            <td><?= htmlspecialchars($exam['academic_year_name'] ?? 'N/A') ?></td>
+                            <td>
+                                <a href="admin.php?page=add-exam-form&exam_id=<?= (int)$exam['id'] ?>" class="btn btn-sm btn-primary me-1">Edit</a>
+                                <button class="btn btn-sm btn-danger deleteExamBtn me-1" data-id="<?= (int)$exam['id'] ?>">Delete</button>
+                                <a href="admin.php?page=add-grades-form&exam_id=<?= (int)$exam['id'] ?>" class="btn btn-sm btn-success">Add Grades</a>
+                            </td>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+                    <?php endforeach; ?>
+                <?php else : ?>
+                    <tr>
+                        <td colspan="5" class="text-center">No Exams Found</td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -95,9 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetch("../controllers/exam-controller.php", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `delete_exam=1&exam_id=${examId}`
             })
             .then(response => {

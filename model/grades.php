@@ -10,61 +10,61 @@ class Grades
     }
 
     // Insert a new grade record
-    public function insertGrade($school_id, $exam_id, $class_id, $subject_id, $student_id, $marks)
+    public function insertGrade($exam_id, $class_id, $subject_id, $student_id, $marks)
     {
-        $query = "INSERT INTO grades (school_id, exam_id, class_id, subject_id, student_id, marks)
-                  VALUES (?, ?, ?, ?, ?, ?)";
+        $query = "INSERT INTO grades (exam_id, class_id, subject_id, student_id, marks)
+                  VALUES (?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("iiiiis", $school_id, $exam_id, $class_id, $subject_id, $student_id, $marks);
+        $stmt->bind_param("iiiis", $exam_id, $class_id, $subject_id, $student_id, $marks);
         return $stmt->execute();
     }
 
     // Update existing grade record
-    public function updateGrade($school_id, $exam_id, $class_id, $subject_id, $student_id, $marks)
+    public function updateGrade($exam_id, $class_id, $subject_id, $student_id, $marks)
     {
         $query = "UPDATE grades 
                   SET marks = ? 
-                  WHERE school_id = ? AND exam_id = ? AND class_id = ? AND subject_id = ? AND student_id = ?";
+                  WHERE exam_id = ? AND class_id = ? AND subject_id = ? AND student_id = ?";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("siiiii", $marks, $school_id, $exam_id, $class_id, $subject_id, $student_id);
+        $stmt->bind_param("siiii", $marks, $exam_id, $class_id, $subject_id, $student_id);
         return $stmt->execute();
     }
 
     // Check if a grade already exists
-    public function getGrade($school_id, $exam_id, $class_id, $subject_id, $student_id)
+    public function getGrade($exam_id, $class_id, $subject_id, $student_id)
     {
         $query = "SELECT * FROM grades 
-                  WHERE school_id = ? AND exam_id = ? AND class_id = ? AND subject_id = ? AND student_id = ?";
+                  WHERE exam_id = ? AND class_id = ? AND subject_id = ? AND student_id = ?";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("iiiii", $school_id, $exam_id, $class_id, $subject_id, $student_id);
+        $stmt->bind_param("iiii", $exam_id, $class_id, $subject_id, $student_id);
         $stmt->execute();
         $result = $stmt->get_result();
         return $result->fetch_assoc() ?: null;
     }
 
-   // Get grades by class, term, and exam
-public function getGradesByClassTermExam($class_id, $term, $exam_id)
-{
-    $query = "
-        SELECT g.student_id, g.subject_id, g.marks, c.name AS class_name
-        FROM grades g
-        INNER JOIN exams e ON g.exam_id = e.id
-        INNER JOIN classes c ON g.class_id = c.class_id
-        WHERE g.class_id = ? AND e.term = ? AND g.exam_id = ?";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bind_param("isi", $class_id, $term, $exam_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    // Get grades by class, term, and exam
+    public function getGradesByClassTermExam($class_id, $term, $exam_id)
+    {
+        $query = "
+            SELECT g.student_id, g.subject_id, g.marks, c.name AS class_name
+            FROM grades g
+            INNER JOIN exams e ON g.exam_id = e.id
+            INNER JOIN classes c ON g.class_id = c.class_id
+            WHERE g.class_id = ? AND e.term = ? AND g.exam_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("isi", $class_id, $term, $exam_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-    $grades = [];
-    while ($row = $result->fetch_assoc()) {
-        $row['grade'] = $this->calculateGrade($row['marks'], $row['class_name']);
-        $grades[$row['student_id']][$row['subject_id']] = $row;
+        $grades = [];
+        while ($row = $result->fetch_assoc()) {
+            $row['grade'] = $this->calculateGrade($row['marks'], $row['class_name']);
+            $grades[$row['student_id']][$row['subject_id']] = $row;
+        }
+
+        return $grades;
     }
 
-    return $grades;
-}
- 
     // Helper function: calculate letter grade from numeric mark and class level
     private function calculateGrade($marks, $class_name)
     {
@@ -88,22 +88,24 @@ public function getGradesByClassTermExam($class_id, $term, $exam_id)
 
         return 'N/A';
     }
-    public function getGradesMap($school_id, $exam_id, $class_id) {
-    $query = "SELECT student_id, subject_id, marks 
-              FROM grades 
-              WHERE school_id = ? AND exam_id = ? AND class_id = ?";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bind_param("iii", $school_id, $exam_id, $class_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
 
-    $gradesMap = [];
-    while ($row = $result->fetch_assoc()) {
-        $gradesMap[$row['student_id']][$row['subject_id']] = $row['marks'];
+    // Get all grades for an exam and class in map format
+    public function getGradesMap($exam_id, $class_id)
+    {
+        $query = "SELECT student_id, subject_id, marks 
+                  FROM grades 
+                  WHERE exam_id = ? AND class_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("ii", $exam_id, $class_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $gradesMap = [];
+        while ($row = $result->fetch_assoc()) {
+            $gradesMap[$row['student_id']][$row['subject_id']] = $row['marks'];
+        }
+
+        return $gradesMap;
     }
-
-    return $gradesMap;
-}
-
 }
 ?>

@@ -1,28 +1,27 @@
 <?php
 // Start session and check access
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+if (session_status() === PHP_SESSION_NONE) session_start();
+
 include('../config/db.php');
 include('../model/class.php');
 include('../model/exam.php');
 
-$schoolId = $_SESSION['user']['school_id'] ?? null;
 $exam_id = $_GET['exam_id'] ?? null;
 
-if (!$schoolId || !$exam_id) {
-    echo "<div class='alert alert-danger'>Missing school or exam context.</div>";
-    exit;
-}
+echo !$exam_id 
+    ? "<div class='alert alert-danger'>Missing exam context.</div>" 
+    : "";
 
-// Load classes for the school
+if (!$exam_id) exit;
+
+// Load all classes (no school filter anymore)
 $classModel = new ClassGroup($conn);
-$classes = $classModel->getAllClassesBySchool($schoolId);
+$classes    = $classModel->getAllClasses();
 ?>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="schooladmin.php?page=exam" class="btn btn-outline-secondary">
+        <a href="admin.php?page=exam" class="btn btn-outline-secondary">
             <i class="fa fa-arrow-left"></i> Back
         </a>
         <h4 class="mb-0">Add Grades</h4>
@@ -35,7 +34,9 @@ $classes = $classModel->getAllClassesBySchool($schoolId);
         <select name="class_id" id="class_id" class="form-select" required>
             <option value="">-- Select Class --</option>
             <?php foreach ($classes as $class): ?>
-                <option value="<?= $class['class_id'] ?>"><?= htmlspecialchars($class['class_name']) ?></option>
+                <option value="<?= $class['class_id'] ?>">
+                    <?= htmlspecialchars($class['class_name']) ?>
+                </option>
             <?php endforeach; ?>
         </select>
     </div>
@@ -57,16 +58,15 @@ $classes = $classModel->getAllClassesBySchool($schoolId);
     classSelect.addEventListener('change', function () {
         const classId = this.value;
 
-        if (!classId) {
-            gridContainer.innerHTML = '<div class="alert alert-warning">Please select a class.</div>';
-            return;
-        }
+        gridContainer.innerHTML = !classId
+            ? '<div class="alert alert-warning">Please select a class.</div>'
+            : '<div class="text-muted">Loading grade grid...</div>';
+
+        if (!classId) return;
 
         fetch(`../views/render-grade-grid.php?class_id=${classId}&exam_id=${examId}`)
             .then(res => res.text())
-            .then(html => {
-                gridContainer.innerHTML = html;
-            })
+            .then(html => gridContainer.innerHTML = html)
             .catch(err => {
                 console.error(err);
                 gridContainer.innerHTML = '<div class="alert alert-danger">Failed to load grade grid.</div>';

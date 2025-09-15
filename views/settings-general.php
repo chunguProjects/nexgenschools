@@ -3,23 +3,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once('../config/db.php');
 require_once('../model/GeneralSettingsModel.php');
 
-$schoolId = $_SESSION['user']['school_id'] ?? null;
-$schoolName = "School";
-$settings = [];
-
-if ($schoolId) {
-    $model = new GeneralSettingsModel($conn);
-    $settings = $model->getSettings($schoolId);
-
-    // Fetch school name
-    $stmt = $conn->prepare("SELECT name FROM schools WHERE school_id = ?");
-    $stmt->bind_param("i", $schoolId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($row = $result->fetch_assoc()) {
-        $schoolName = $row['name'];
-    }
-}
+$model = new GeneralSettingsModel($conn);
+$settings = $model->getSettings();
 
 $successMessage = $_SESSION['settings_success'] ?? null;
 $errors = $_SESSION['settings_errors'] ?? [];
@@ -91,14 +76,13 @@ unset($_SESSION['settings_success'], $_SESSION['settings_errors']);
 <body>
 
 <div class="settings-container">
-    <div class="d-flex justify-content-between align-items-center mb-4" style="display: flex; justify-content: space-between; align-items: center;">
-    <a href="schooladmin.php?page=dashboard" class="btn btn-outline-secondary" style="text-decoration: none; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px;">
-        <i class="fa fa-arrow-left"></i> Back
-    </a>
-    <h2 style="flex: 1; text-align: center; margin: 0;">General School Settings</h2>
-    <div style="width: 100px;"></div> <!-- Placeholder to balance space -->
-</div>
-
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <a href="admin.php?page=dashboard" class="btn btn-outline-secondary" style="text-decoration: none; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px;">
+            <i class="fa fa-arrow-left"></i> Back
+        </a>
+        <h2 style="flex: 1; text-align: center; margin: 0;">General School Settings</h2>
+        <div style="width: 100px;"></div>
+    </div>
 
     <?php if ($successMessage): ?>
         <div class="flash-success"><?= htmlspecialchars($successMessage) ?></div>
@@ -115,10 +99,9 @@ unset($_SESSION['settings_success'], $_SESSION['settings_errors']);
     <?php endif; ?>
 
     <form action="../controllers/GeneralSettingsController.php" method="POST" enctype="multipart/form-data">
-        <input type="hidden" name="school_id" value="<?= htmlspecialchars($schoolId) ?>">
 
         <label for="school_name">School Name</label>
-        <input type="text" id="school_name" value="<?= htmlspecialchars($schoolName) ?>" disabled>
+        <input type="text" id="school_name" name="school_name" value="<?= htmlspecialchars($settings['school_name'] ?? '') ?>" required>
 
         <label for="motto">School Motto</label>
         <input type="text" id="motto" name="motto" value="<?= htmlspecialchars($settings['motto'] ?? '') ?>">

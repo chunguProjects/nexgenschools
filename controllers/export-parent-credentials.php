@@ -2,58 +2,53 @@
 session_start();
 include('../config/db.php');
 
-$schoolId = $_SESSION['user']['school_id'] ?? null;
-if (!$schoolId) {
-    die("Unauthorized access");
-}
-
 header('Content-Type: text/csv; charset=utf-8');
-header('Content-Disposition: attachment; filename=parent_credentials.csv');
+header('Content-Disposition: attachment; filename=student_details.csv');
 
 $output = fopen('php://output', 'w');
-fputcsv($output, ['Parent Name', 'Phone Number (Username)', 'Temporary Password', 'Student Name']);
 
-// 1. Load parents from session first (newly created)
-$sessionParents = $_SESSION['parent_credentials'] ?? [];
+// CSV headers
+fputcsv($output, ['Registration Number','Student Name','Date of Birth', 'Class']);
 
-// Use username as key to avoid duplicates
+// 1. Load newly created students from session (if any)
+$sessionStudents = $_SESSION['student_credentials'] ?? [];
 $exportedUsernames = [];
-foreach ($sessionParents as $entry) {
+
+foreach ($sessionStudents as $entry) {
     fputcsv($output, [
-        $entry['parent_name'],
         $entry['username'],
+        $entry['first_name'] . ' ' . $entry['last_name'],
         $entry['password'],
-        $entry['student_name']
+        $entry['date_of_birth'] ?? '',
+        $entry['class_name'] ?? ''
     ]);
     $exportedUsernames[$entry['username']] = true;
 }
 
-// 2. Fetch all parents in DB excluding those already exported
+// 2. Fetch all students from DB excluding session ones and soft-deleted
 $query = "
     SELECT 
-        u.full_name AS parent_name,
-        u.phone_number AS username,
-        CONCAT(s.first_name, ' ', s.last_name) AS student_name
-    FROM users u
-    INNER JOIN parent_student ps ON u.user_id = ps.parent_id
-    INNER JOIN students s ON ps.student_id = s.student_id
-    WHERE u.role_id = (SELECT role_id FROM roles WHERE name = 'parent' LIMIT 1)
-    AND u.school_id = ?
-    ORDER BY u.full_name
+        s.first_name,
+        s.last_name,
+        s.username,
+        s.date_of_birth,
+        c.name AS class_name
+    FROM students s
+    LEFT JOIN classes c ON s.class_id = c.class_id
+    WHERE s.is_deleted = 0
+    ORDER BY s.first_name, s.last_name
 ";
 
-$stmt = $conn->prepare($query);
-$stmt->bind_param('i', $schoolId);
-$stmt->execute();
-$result = $stmt->get_result();
+
+$result = $conn->query($query);
 
 while ($row = $result->fetch_assoc()) {
     if (!isset($exportedUsernames[$row['username']])) {
         fputcsv($output, [
-            $row['parent_name'],
             $row['username'],
-            '******', // Placeholder for password
-            $row['student_name']
+            $row['first_name'] . ' ' . $row['last_name'],
+            $row['date_of_birth'],
+            $row['class_name'] ?? ''
         ]);
         $exportedUsernames[$row['username']] = true;
     }

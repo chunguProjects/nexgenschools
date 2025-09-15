@@ -12,12 +12,6 @@ if (!$exam_id || !$class_id || empty($grades)) {
     die("Invalid request - Missing required fields.");
 }
 
-// Get school ID from session
-$school_id = $_SESSION['user']['school_id'] ?? null;
-if (!$school_id) {
-    die("Unauthorized - School context missing.");
-}
-
 // Initialize Grades model
 $gradesModel = new Grades($conn);
 
@@ -37,12 +31,12 @@ foreach ($grades as $student_id => $subjectGrades) {
         }
 
         // Check if grade already exists
-        $existing = $gradesModel->getGrade($school_id, $exam_id, $class_id, $subject_id, $student_id);
+        $existing = $gradesModel->getGrade($exam_id, $class_id, $subject_id, $student_id);
 
         if ($existing) {
-            $success = $gradesModel->updateGrade($school_id, $exam_id, $class_id, $subject_id, $student_id, $mark);
+            $success = $gradesModel->updateGrade($exam_id, $class_id, $subject_id, $student_id, $mark);
         } else {
-            $success = $gradesModel->insertGrade($school_id, $exam_id, $class_id, $subject_id, $student_id, $mark);
+            $success = $gradesModel->insertGrade($exam_id, $class_id, $subject_id, $student_id, $mark);
         }
 
         if (!$success) {

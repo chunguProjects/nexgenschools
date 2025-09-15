@@ -1,94 +1,194 @@
 <?php
 class Student {
     private $conn;
-    private $parentCredentials = [];
 
     public function __construct($db) {
         $this->conn = $db;
     }
 
-    public function getParentCredentials(): array {
-        return $this->parentCredentials;
-    }
-
-    public function addStudentsWithParents(array $students) {
+    // -----------------------------
+    // Add Multiple Students
+    // -----------------------------
+    public function addStudents(array $students) {
         $this->conn->begin_transaction();
-
         try {
-            $studentQuery = "
-                INSERT INTO students (first_name, last_name, gender, class_id, school_id, contact_number, date_of_birth, username, password)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ";
-            $stmtStudent = $this->conn->prepare($studentQuery);
-            $accountList = [];
+            $stmt = $this->conn->prepare("
+                INSERT INTO students
+                (first_name, last_name, gender, class_id, date_of_birth, contact_number, username, password)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
 
             foreach ($students as $s) {
-                if (empty($s['first_name']) || empty($s['gender']) || empty($s['parent_phone'])) {
-                    throw new Exception("Missing required student or parent data.");
+                if (empty($s['first_name']) || empty($s['gender']) || empty($s['contact_number']) || empty($s['class_id']) || empty($s['date_of_birth'])) {
+                    throw new Exception("Missing required student data.");
                 }
-
-                $schoolId = $_SESSION['user']['school_id'] ?? null;
-                if (!$schoolId) throw new Exception("School ID missing in session.");
 
                 $firstName = trim($s['first_name']);
                 $lastName  = trim($s['last_name'] ?? '');
                 $gender    = $s['gender'];
-                $classId   = $s['class_id'];
-                $dob       = $s['date_of_birth'] ?? null;
-                $parentPhone = trim($s['parent_phone']);
-                $relationship = $s['relationship'] ?? 'Parent';
-                $contactNumber = $parentPhone;
+                $classId   = (int)$s['class_id'];
+                $dob       = $s['date_of_birth'];
+                $contact   = trim($s['contact_number']);
 
-                $username = $parentPhone;
-                $plainPassword = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
-                $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
+                $username = $this->generateRegistrationNumber($classId);
+                $password = password_hash(date('Ymd', strtotime($dob)), PASSWORD_DEFAULT);
 
-                $stmtStudent->bind_param("sssisssss", $firstName, $lastName, $gender, $classId, $schoolId, $contactNumber, $dob, $username, $hashedPassword);
-                if (!$stmtStudent->execute()) throw new Exception("Failed to insert student: " . $stmtStudent->error);
+                $stmt->bind_param("sssissss", $firstName, $lastName, $gender, $classId, $dob, $contact, $username, $password);
+                if (!$stmt->execute()) {
+                    throw new Exception("Adding new students failed: " . $stmt->error);
+                }
 
-                $this->parentCredentials[] = [
-                    'student_name' => "$firstName $lastName",
-                    'username'     => $username,
-                    'password'     => $plainPassword,
-                    'phone_number' => $parentPhone,
-                ];
-
-                $accountList[] = [
-                    'student' => [
-                        'first_name'   => $firstName,
-                        'last_name'    => $lastName,
-                        'date_of_birth'=> $dob,
-                        'username'     => $username,
-                        'raw_password' => $plainPassword,
-                        'phone_number' => $parentPhone,
-                        'parent_name'  => "$relationship of $firstName"
-                    ]
-                ];
+                $studentId = $this->conn->insert_id;
+                $this->enrollStudent($studentId, $classId);
             }
 
             $this->conn->commit();
-            return ['success' => true, 'accounts' => $accountList];
+            return ['success' => true];
         } catch (Exception $ex) {
             $this->conn->rollback();
             return ['success' => false, 'message' => $ex->getMessage()];
         }
     }
 
+    // -----------------------------
+    // Enroll Student
+    // -----------------------------
+    private function enrollStudent(int $studentId, int $classId) {
+        $academicYearId = $this->getAcademicYearIdByClass($classId);
+
+        // Check if already enrolled
+        $stmt = $this->conn->prepare("
+            SELECT enrollment_id 
+            FROM student_enrollments 
+            WHERE student_id = ? AND academic_year_id = ? 
+            LIMIT 1
+        ");
+        $stmt->bind_param("ii", $studentId, $academicYearId);
+        $stmt->execute();
+        $exists = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($exists) return;
+
+        $stmt = $this->conn->prepare("
+            INSERT INTO student_enrollments (student_id, class_id, academic_year_id)
+            VALUES (?, ?, ?)
+        ");
+        $stmt->bind_param("iii", $studentId, $classId, $academicYearId);
+        if (!$stmt->execute()) {
+            throw new Exception("Enrollment failed: " . $stmt->error);
+        }
+        $stmt->close();
+    }
+
+    // -----------------------------
+    // Update Enrollment / Promotion
+    // -----------------------------
+    public function updateEnrollment(int $studentId, int $classId): bool {
+        $academicYearId = $this->getAcademicYearIdByClass($classId);
+
+        // Check if enrollment exists
+        $stmt = $this->conn->prepare("
+            SELECT enrollment_id 
+            FROM student_enrollments 
+            WHERE student_id = ? AND academic_year_id = ? 
+            LIMIT 1
+        ");
+        $stmt->bind_param("ii", $studentId, $academicYearId);
+        $stmt->execute();
+        $existing = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($existing) {
+            // Update class_id
+            $stmt = $this->conn->prepare("
+                UPDATE student_enrollments
+                SET class_id = ?
+                WHERE enrollment_id = ?
+            ");
+            $stmt->bind_param("ii", $classId, $existing['enrollment_id']);
+        } else {
+            // Insert new enrollment
+            $stmt = $this->conn->prepare("
+                INSERT INTO student_enrollments (student_id, class_id, academic_year_id)
+                VALUES (?, ?, ?)
+            ");
+            $stmt->bind_param("iii", $studentId, $classId, $academicYearId);
+        }
+
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    // -----------------------------
+    // Promote Students
+    // -----------------------------
+    public function promoteStudents(array $studentIds, int $nextClassId): array {
+        $results = [];
+        foreach ($studentIds as $studentId) {
+            $results[$studentId] = $this->updateEnrollment($studentId, $nextClassId);
+        }
+        return $results;
+    }
+
+    // -----------------------------
+    // Helpers
+    // -----------------------------
+    private function getAcademicYearIdByClass(int $classId): int {
+        $stmt = $this->conn->prepare("SELECT academic_year_id FROM classes WHERE class_id = ? LIMIT 1");
+        $stmt->bind_param("i", $classId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($res['academic_year_id'] ?? 0);
+    }
+
+    public function getCurrentAcademicYearId(): int {
+        $res = $this->conn->query("SELECT academic_year_id FROM academic_years WHERE is_current = 1 LIMIT 1");
+        $row = $res->fetch_assoc();
+        return (int)($row['academic_year_id'] ?? 0);
+    }
+
+    // -----------------------------
+    // Get Students By Class (current year)
+    // -----------------------------
+    public function getStudentsByClass(int $classId, ?int $academicYearId = null): array {
+        $academicYearId = $academicYearId ?? $this->getCurrentAcademicYearId();
+
+        $stmt = $this->conn->prepare("
+            SELECT s.student_id, s.first_name, s.last_name, s.gender, s.date_of_birth, s.contact_number, s.username
+            FROM students s
+            JOIN student_enrollments se ON s.student_id = se.student_id
+            WHERE se.class_id = ? AND se.academic_year_id = ? AND s.is_deleted = 0
+        ");
+        $stmt->bind_param("ii", $classId, $academicYearId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $students = $result->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $students;
+    }
+
+    // -----------------------------
+    // Update Student Info
+    // -----------------------------
     public function updateStudent(int $studentId, array $data): bool {
         $fields = [];
         $params = [];
         $types = '';
 
-        $allowedFields = ['first_name', 'last_name', 'gender', 'class_id', 'date_of_birth', 'contact_number'];
+        $allowed = ['first_name', 'last_name', 'gender', 'class_id', 'date_of_birth', 'contact_number'];
+        $current = $this->getStudentById($studentId);
+        $oldClassId = $current['class_id'] ?? null;
 
-        foreach ($allowedFields as $field) {
-            if (isset($data[$field])) {
-                $fields[] = "$field = ?";
-                $params[] = $data[$field];
-                $types .= is_int($data[$field]) ? 'i' : 's';
+        foreach ($allowed as $f) {
+            if (isset($data[$f])) {
+                $fields[] = "$f = ?";
+                $params[] = $data[$f];
+                $types .= is_int($data[$f]) ? 'i' : 's';
             }
         }
-
         if (empty($fields)) return false;
 
         $query = "UPDATE students SET " . implode(', ', $fields) . " WHERE student_id = ?";
@@ -96,57 +196,61 @@ class Student {
         $types .= 'i';
 
         $stmt = $this->conn->prepare($query);
-        if (!$stmt) return false;
-
         $stmt->bind_param($types, ...$params);
         $success = $stmt->execute();
         $stmt->close();
+
+        if ($success && isset($data['class_id']) && $data['class_id'] != $oldClassId) {
+            $this->updateEnrollment($studentId, $data['class_id']);
+        }
 
         return $success;
     }
 
     public function getStudentById(int $studentId): ?array {
-        $query = "SELECT * FROM students WHERE student_id = ? LIMIT 1";
-        $stmt = $this->conn->prepare($query);
+        $stmt = $this->conn->prepare("SELECT * FROM students WHERE student_id = ? LIMIT 1");
         $stmt->bind_param("i", $studentId);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $student = $result->fetch_assoc();
+        $student = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-
         return $student ?: null;
     }
 
-    public function getStudentsByClass($classId) {
-        $query = "SELECT student_id, first_name, last_name, gender, date_of_birth, contact_number
-                  FROM students WHERE class_id = ? AND is_deleted = 0";
-        $stmt = $this->conn->prepare($query);
+    // -----------------------------
+    // Registration Number Generator
+    // -----------------------------
+    private function generateRegistrationNumber(int $classId): string {
+        $stmt = $this->conn->prepare("SELECT name FROM classes WHERE class_id = ? LIMIT 1");
         $stmt->bind_param("i", $classId);
         $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->fetch_all(MYSQLI_ASSOC);
-    }
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 
-    public function getStudentsBySchool($schoolId) {
-        $query = "SELECT s.*, c.name AS class_name 
-                  FROM students s 
-                  LEFT JOIN classes c ON s.class_id = c.class_id 
-                  WHERE s.school_id = ? AND s.is_deleted = 0";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $schoolId);
+        $className = $res['name'] ?? 'Form1';
+        preg_match('/(\d+)/', $className, $matches);
+        $level = $matches[1] ?? 1;
+
+        $year = date('Y') - ($level - 1);
+        $like = "STU{$year}-%";
+
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM students WHERE username LIKE ?");
+        $stmt->bind_param("s", $like);
         $stmt->execute();
-        return $stmt->get_result();
+        $cnt = $stmt->get_result()->fetch_assoc()['cnt'] ?? 0;
+        $stmt->close();
+
+        return sprintf("STU%s-%03d", $year, $cnt + 1);
     }
 
+    // -----------------------------
+    // Delete Student
+    // -----------------------------
     public function deleteStudent(int $studentId): bool {
-        $query = "UPDATE students SET is_deleted = 1 WHERE student_id = ?";
-        $stmt = $this->conn->prepare($query);
+        $stmt = $this->conn->prepare("UPDATE students SET is_deleted = 1 WHERE student_id = ?");
         $stmt->bind_param("i", $studentId);
         $success = $stmt->execute();
         $stmt->close();
-
         return $success;
     }
-   
 }
 ?>

@@ -1,6 +1,6 @@
 <?php
-include_once('../model/exam.php');
 include_once('../config/db.php');
+include_once('../model/exam.php');
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -10,68 +10,71 @@ $examModel = new Exams($conn);
 
 // ===== ADD EXAM =====
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_exam'])) {
-    $schoolId = $_SESSION['user']['school_id'] ?? null;
+    $examName       = trim($_POST['exam_name'] ?? '');
+    $term           = trim($_POST['term'] ?? '');
+    $academicYearId = isset($_POST['academic_year_id']) ? intval($_POST['academic_year_id']) : null;
 
-    if (!$schoolId) {
-        header("Location: ../view/add-exam-form.php?error=Unauthorized+Access");
+    // Validate required fields
+    if (!$examName || !$term || !$academicYearId) {
+        $_SESSION['flash_message'] = [
+            'type' => 'error',
+            'text' => 'Please fill all required fields'
+        ];
+        header("Location: ../dashboard/schooladmin.php?page=exam-form");
         exit;
     }
 
-    $examName = trim($_POST['exam_name'] ?? '');
-    $term = trim($_POST['term'] ?? '');
-    $academicYear = trim($_POST['academic_year'] ?? '');
+    $result = $examModel->addExam($examName, $term, $academicYearId);
 
-    if (empty($examName) || empty($term) || empty($academicYear)) {
-        header("Location: ../view/add-exam-form.php?error=Please+fill+all+required+fields");
-        exit;
-    }
+    $_SESSION['flash_message'] = $result
+        ? ['type' => 'success', 'text' => 'Exam added successfully']
+        : ['type' => 'error', 'text' => 'Exam already exists for this academic year'];
 
-    $result = $examModel->addExam($examName, $term, $academicYear, $schoolId);
-
-    if ($result) {
-        header("Location: ../view/add-exam-form.php?message=Exam+Added+Successfully");
-    } else {
-        header("Location: ../view/add-exam-form.php?error=Error+Adding+Exam");
-    }
+    header("Location: ../dashboard/schooladmin.php?page=exam");
     exit;
 }
 
 // ===== UPDATE EXAM =====
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_exam'])) {
-    $examId = (int)($_POST['exam_id'] ?? 0);
-    $examName = trim($_POST['exam_name'] ?? '');
-    $term = trim($_POST['term'] ?? '');
-    $academicYear = trim($_POST['academic_year'] ?? '');
+    $examId         = intval($_POST['exam_id'] ?? 0);
+    $examName       = trim($_POST['exam_name'] ?? '');
+    $term           = trim($_POST['term'] ?? '');
+    $academicYearId = isset($_POST['academic_year_id']) ? intval($_POST['academic_year_id']) : null;
 
-    if (!$examId || empty($examName) || empty($term) || empty($academicYear)) {
-        header("Location: ../view/add-exam-form.php?exam_id=$examId&error=Missing+Required+Fields");
+    // Validate required fields
+    if (!$examId || !$examName || !$term || !$academicYearId) {
+        $_SESSION['flash_message'] = [
+            'type' => 'error',
+            'text' => 'Missing required fields'
+        ];
+        header("Location: ../dashboard/schooladmin.php?page=exam-form&exam_id=$examId");
         exit;
     }
 
-    $result = $examModel->updateExam($examId, $examName, $term, $academicYear);
+    $result = $examModel->updateExam($examId, $examName, $term, $academicYearId);
 
-    if ($result) {
-        header("Location: ../view/add-exam-form.php?exam_id=$examId&message=Exam+Updated+Successfully");
-    } else {
-        header("Location: ../view/add-exam-form.php?exam_id=$examId&error=Failed+to+Update+Exam");
-    }
+    $_SESSION['flash_message'] = $result
+        ? ['type' => 'success', 'text' => 'Exam updated successfully']
+        : ['type' => 'error', 'text' => 'Failed to update exam'];
+
+    header("Location: ../dashboard/schooladmin.php?page=exam");
     exit;
 }
 
+// ===== DELETE EXAM =====
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_exam'])) {
-    $examId = (int)($_POST['exam_id'] ?? 0);
+    $examId = intval($_POST['exam_id'] ?? 0);
+
     if ($examId) {
         $result = $examModel->deleteExam($examId);
-        if ($result) {
-            $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Exam Deleted'];
-        } else {
-            $_SESSION['flash_message'] = ['type' => 'error', 'text' => 'Delete Failed'];
-        }
+        $_SESSION['flash_message'] = $result
+            ? ['type' => 'success', 'text' => 'Exam deleted successfully']
+            : ['type' => 'error', 'text' => 'Failed to delete exam'];
     } else {
         $_SESSION['flash_message'] = ['type' => 'error', 'text' => 'Invalid Exam ID'];
     }
 
-    header("Location: /nexgenschools/dashboard/schooladmin.php?page=exam");
+    header("Location: ../dashboard/schooladmin.php?page=exam");
     exit;
 }
-
+?>

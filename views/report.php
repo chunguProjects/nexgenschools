@@ -12,15 +12,11 @@ foreach ($subjects as $subject) {
 }
 
 // Handle logo
-
 $settings = $student['settings'] ?? [];
 $logoPath = $settings['logo_path'] ?? null;
-$logoUrl = '/nexgenschools/' . ltrim($logoPath, '/');
+$logoUrl = $logoPath ? '/nexgenschools/' . ltrim($logoPath, '/') : null;
 $logoFullPath = $logoPath ? __DIR__ . '/../' . ltrim($logoPath, '/') : null;
-
 ?>
-
-
 
 <style>
 body { font-size: 12px; }
@@ -37,41 +33,32 @@ body { font-size: 12px; }
 .header {
     text-align: center;
     border-bottom: 2px solid #000;
-    padding-bottom: 2px; /* ✅ Add this to reduce bottom spacing */
+    padding-bottom: 2px;
 }
-
 .header-logo img {
-    width: 45px; /* ✅ Reduced from 60px */
+    width: 45px;
     height: 45px;
     object-fit: contain;
-    margin-bottom: 3px; /* ✅ Reduce spacing under logo */
+    margin-bottom: 3px;
 }
-
 .school-name {
-    font-size: 16px; /* ✅ Slightly smaller */
+    font-size: 16px;
     font-weight: bold;
-    margin: 2px 0 1px 0; /* ✅ Minimize vertical space */
+    margin: 2px 0 1px 0;
     line-height: 1.1;
 }
-
 .school-meta {
     font-size: 11px;
     margin: 1px 0;
     line-height: 1.2;
 }
-
 .report-title {
     font-weight: bold;
     font-size: 13px;
     margin: 3px 0 0 0;
     text-transform: uppercase;
 }
-
-.header-right {width: 20%;}
-.header td { vertical-align: middle; }
-.student-info { padding-bottom: 10px; }
-.student-info table { width: 100%; border-collapse: collapse; }
-
+.student-info table { width: 100%; border-collapse: collapse; padding-bottom: 10px; }
 .grades-table {
     width: 100%;
     border-collapse: collapse;
@@ -83,48 +70,33 @@ body { font-size: 12px; }
     text-align: left;
 }
 .grades-table th { background-color: #f5f5f5; }
-
 .sno { width: 7%; }
 .subject { width: 35%; padding-left: 5px; }
 .marks { width: 10%; }
 .grade { width: 10%; }
 .remarks { width: 18%; }
 .teacher { width: 20%; }
-
-table.signature, table.form-remarks, table.grading-criteria {
-    width: 100%;
-    border-collapse: collapse;
-}
-.fee-structure th, .fee-structure td {
-    border: 1px solid #000;
-    padding: 6px;
-    font-size: 12px;
-}
-
+table.signature, table.form-remarks, table.grading-criteria { width: 100%; border-collapse: collapse; }
+.fee-structure th, .fee-structure td { border: 1px solid #000; padding: 6px; font-size: 12px; }
 </style>
 
 <div class="report-container">
     <!-- HEADER -->
-<div class="header">
-    <div class="header-logo">
-        <?php if (file_exists($logoFullPath)): ?>
-            <img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo">
-        <?php endif; ?>
+    <div class="header">
+        <div class="header-logo">
+            <?php if ($logoFullPath && file_exists($logoFullPath)): ?>
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo">
+            <?php endif; ?>
+        </div>
+
+        <p class="school-name"><?= htmlspecialchars($student['school_name'] ?? 'SCHOOL NAME') ?></p>
+        <p class="school-meta">
+            <?= htmlspecialchars($settings['address'] ?? '') ?><br>
+            Email: <?= htmlspecialchars($settings['contact_email'] ?? '') ?><br>
+            Phone: <?= htmlspecialchars($settings['contact_phone'] ?? '') ?>
+        </p>
+        <p class="report-title">School Progress Report</p>
     </div>
-
-    <p class="school-name"><?= htmlspecialchars($student['school_name'] ?? 'SCHOOL NAME') ?></p>
-    
-    <p class="school-meta">
-        <?= htmlspecialchars($settings['address'] ?? '') ?><br>
-        Email: <?= htmlspecialchars($settings['contact_email'] ?? '') ?><br>
-        Phone: <?= htmlspecialchars($settings['contact_phone'] ?? '') ?>
-    </p>
-
-    <p class="report-title">School Progress Report</p>
-</div>
-
-
-
 
     <!-- STUDENT INFO -->
     <div class="student-info">
@@ -138,9 +110,9 @@ table.signature, table.form-remarks, table.grading-criteria {
                 <td colspan="2" style="text-align: center;"><strong>No of Students:</strong> <?= count($students) ?></td>
             </tr>
             <tr>
-    <td><strong>Exam:</strong> <?= htmlspecialchars($student['exam_name'] ?? '-') ?></td>
-    <td colspan="2" style="text-align: center;"></td>
-</tr>
+                <td><strong>Exam:</strong> <?= htmlspecialchars($student['exam_name'] ?? '-') ?></td>
+                <td colspan="2"></td>
+            </tr>
             <tr>
                 <td><strong>Class:</strong> <?= htmlspecialchars($student['class_name'] ?? 'N/A') ?></td>
                 <td colspan="2" style="text-align: center;"><strong>Position in Class:</strong> 30</td>
@@ -191,24 +163,17 @@ table.signature, table.form-remarks, table.grading-criteria {
         $level = $student['level'];
         $gradedCount = count($gradedSubjects);
         $averageMarks = $gradedCount > 0 ? round($totalMarks / $gradedCount, 2) : 0;
-
-        $displayGrade = '-';
-        $totalPoints = '-';
-
+        $displayGrade = $totalPoints = '-';
         if ($level === 'JCE') {
             $displayGrade = $gradedCount >= 6 ? getOverallGrade($averageMarks, $gradingCriteria) : '< 6 subjects';
-        }
-
-        if ($level === 'MSCE') {
+        } elseif ($level === 'MSCE') {
             if ($gradedCount >= 6) {
                 $pointsArray = [];
                 foreach ($gradedSubjects as $subject) {
                     $marks = $grades[$student['student_id']][$subject['subject_id']]['marks'];
                     $gradeInfo = getGradeRemarkByMarks($marks, $gradingCriteria);
                     $gradeValue = is_numeric($gradeInfo['grade']) ? (int)$gradeInfo['grade'] : null;
-                    if ($gradeValue !== null) {
-                        $pointsArray[] = $gradeValue;
-                    }
+                    if ($gradeValue !== null) $pointsArray[] = $gradeValue;
                 }
                 if (count($pointsArray) >= 6) {
                     sort($pointsArray);
@@ -246,7 +211,6 @@ table.signature, table.form-remarks, table.grading-criteria {
     $formTeacherRemark = $teacherRemarks['form_teacher'];
     $headTeacherRemark = $teacherRemarks['head_teacher'];
     ?>
-
     <table>
         <tr>
             <td colspan="2" style="border: 1px solid #000; padding: 5px;"><strong>Form Teacher Remarks</strong></td>
@@ -257,14 +221,14 @@ table.signature, table.form-remarks, table.grading-criteria {
             <td colspan="2" style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($headTeacherRemark) ?></td>
         </tr>
         <tr>
-            <td style="border: 1px solid #000; padding: 5px;"><strong>Closing Date</strong></td>
-            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['closing_date'] ?? '-') ?></td>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Opening Date</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['opening_date'] ?? '-') ?></td>
             <td style="border: 1px solid #000; padding: 5px;"><strong>Head Teacher's Name</strong></td>
             <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['head_teacher_name'] ?? '') ?></td>
         </tr>
         <tr>
-            <td style="border: 1px solid #000; padding: 5px;"><strong>Opening Date</strong></td>
-            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['opening_date'] ?? '-') ?></td>
+            <td style="border: 1px solid #000; padding: 5px;"><strong>Closing Date</strong></td>
+            <td style="border: 1px solid #000; padding: 5px;"><?= htmlspecialchars($settings['closing_date'] ?? '-') ?></td>
             <td style="border: 1px solid #000; padding: 5px;"><strong>Head Teacher's Signature</strong></td>
             <td style="border: 1px solid #000; padding: 5px;"></td>
         </tr>
@@ -274,7 +238,8 @@ table.signature, table.form-remarks, table.grading-criteria {
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
                         <?php foreach ($gradingCriteria as $criteria): ?>
-                            <td style="border-right: 1px solid #000; padding: 3px; font-size: 10px; text-align: center;">
+                            <td style="border-right: 1px solid #000; padding: 3px; font-size: 10px
+; text-align: center;">
                                 <?= htmlspecialchars($criteria['grade']) ?>
                                 (<?= $criteria['min_marks'] . '-' . $criteria['max_marks'] ?>)
                             </td>

@@ -60,9 +60,16 @@ if (isset($_SESSION['user'])) {
               />
             </div>
             <button type="submit" class="btn btn-primary w-100">Login</button>
-            <div class="mt-3 text-center">
-              <small class="text-muted">Forgot your password? <a href="#">Reset here</a></small>
-            </div>
+           <div class="mt-3 text-center">
+            <small class="text-muted">
+              Forgot your password? <a href="#">Reset here</a>
+            </small>
+          </div>
+
+          <!-- Back Button -->
+          <div class="mt-3">
+            <a href="../index.php" class="btn btn-outline-secondary w-100">← Back to Homepage</a>
+          </div>
           </form>
         </div>
       </div>

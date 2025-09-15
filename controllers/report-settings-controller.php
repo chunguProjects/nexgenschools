@@ -4,15 +4,14 @@ require_once('../model/ReportSettingsModel.php');
 
 // Check if user is authenticated
 session_start();
-if (!isset($_SESSION['user']['school_id'])) {
+if (!isset($_SESSION['user'])) {
     die('Unauthorized access');
 }
 
-$schoolId = $_SESSION['user']['school_id'];
 $model = new ReportSettingsModel($conn);
 
 // Get current settings
-$settings = $model->getSettings($schoolId);
+$settings = $model->getSettings();
 
 // Save updated settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -27,7 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'include_fees'      => isset($_POST['include_fees']) ? 1 : 0
     ];
 
-    $success = $model->saveSettings($schoolId, $data);
+    $success = $model->saveSettings($data);
+
     if ($success) {
         $_SESSION['flash'] = "Report settings saved successfully.";
     } else {
@@ -35,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Reload to reflect changes
-        header('Location: ../dashboard/schooladmin.php?page=settings-report');
-
+    header('Location: ../dashboard/admin.php?page=settings-report');
     exit;
 }

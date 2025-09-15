@@ -1,90 +1,96 @@
 <?php
 require_once('../utils/grades-utils.php');
-require_once('../model/GeneralSettingsModel.php'); // include settings model here
+require_once('../model/GeneralSettingsModel.php'); // general settings
 require_once('../model/ReportSettingsModel.php');
 
 class StudentReportService {
-    private $conn, $schoolId;
+    private $conn;
 
-    public function __construct($conn, $schoolId) {
+    public function __construct($conn) {
         $this->conn = $conn;
-        $this->schoolId = $schoolId;
     }
 
     public function generateReports($classId, $term, $examId) {
-        include_once('../model/student.php');
-        include_once('../model/class.php');
-        include_once('../model/grades.php');
-        include_once('../model/subject.php');
-        include_once('../model/exam.php');
-        include_once('../model/school.php');
+    include_once('../model/student.php');
+    include_once('../model/class.php');
+    include_once('../model/grades.php');
+    include_once('../model/subject.php');
+    include_once('../model/exam.php');
+    include_once('../model/school.php');
 
-        $studentModel = new Student($this->conn);
-        $classModel = new ClassGroup($this->conn);
-        $gradesModel = new Grades($this->conn);
-        $subjectModel = new Subjects($this->conn);
-        $examModel = new Exams($this->conn);
-        $schoolModel = new School($this->conn);
+    $studentModel = new Student($this->conn);
+    $classModel   = new ClassGroup($this->conn);
+    $gradesModel  = new Grades($this->conn);
+    $subjectModel = new Subjects($this->conn);
+    $examModel    = new Exams($this->conn);
+    $schoolModel  = new School($this->conn);
 
-        $students = $studentModel->getStudentsByClass($classId);
-        $subjects = $subjectModel->getSubjectsByClass($classId);
-        $grades = $gradesModel->getGradesByClassTermExam($classId, $term, $examId);
+    $students = $studentModel->getStudentsByClass($classId);
+    $subjects = $subjectModel->getSubjectsByClass($classId);
+    $grades   = $gradesModel->getGradesByClassTermExam($classId, $term, $examId);
 
-        $class = $classModel->getClassById($classId);
-        $className = $class['name'] ?? 'N/A';
-        $gradingCriteria = $this->getGradingCriteria($class['name']);
-        $academicYear = $examModel->getAcademicYearByClassAndTerm($classId, $term);
+    $class = $classModel->getClassById($classId);
+    $className = $class['name'] ?? 'N/A';
+    $gradingCriteria = $this->getGradingCriteria($className);
 
-        $schoolInfo = $schoolModel->getSchoolById($this->schoolId);
-        $schoolName = $schoolInfo['school_name'] ?? 'SCHOOL NAME';
+    // ✅ Fetch exam and academic year info
+    $examInfo = $examModel->getExamById($examId);
+    $examName = $examInfo['exam_name'] ?? '';
+    $academicYearId = $examInfo['academic_year_id'] ?? null;
 
-        $examInfo = $examModel->getExamById($examId);
-        $examName = $examInfo['exam_name'] ?? '';
-        // 🆕 Get logo path for school
-        $generalSettingsModel = new GeneralSettingsModel($this->conn);
-        $reportSettingsModel = new ReportSettingsModel($this->conn);
-
-        $generalSettings = $generalSettingsModel->getSettings($this->schoolId);
-        $reportSettings = $reportSettingsModel->getSettings($this->schoolId);
-
-        $logoPath = $generalSettings['logo_path'] ?? null;
-
-        // Merge general and report settings into one array
-        $settings = array_merge($generalSettings, $reportSettings);
-
-
-        $htmlArray = [];
-
-        foreach ($students as $student) {
-            $student['academic_year'] = $academicYear;
-            $student['school_name'] = $schoolName;
-            $student['class_name'] = $className; // ✅ Inject class name here
-            $student['settings'] = $settings;
-            $student['level'] = $this->determineLevelFromClassName($student['class_name']);
-            $student['exam_name'] = $examName; // 🆕 Pass to report
-
-
-            ob_start();
-            include('../views/report.php');
-            $htmlArray[] = ob_get_clean();
-        }
-
-        return $htmlArray;
+    $academicYear = null;
+    if ($academicYearId) {
+        $stmt = $this->conn->prepare("SELECT name FROM academic_years WHERE academic_year_id = ? LIMIT 1");
+        $stmt->bind_param("i", $academicYearId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $academicYear = $res['name'] ?? null;
     }
+
+    // 🆕 Get general settings
+    $generalSettingsModel = new GeneralSettingsModel($this->conn);
+    $reportSettingsModel  = new ReportSettingsModel($this->conn);
+
+    $generalSettings = $generalSettingsModel->getSettings(); // single row
+    $reportSettings  = $reportSettingsModel->getSettings();
+
+    $schoolName = $generalSettings['school_name'] ?? 'SCHOOL NAME';
+    $logoPath   = $generalSettings['logo_path'] ?? null;
+
+    $settings = array_merge($generalSettings, $reportSettings);
+
+    $htmlArray = [];
+
+    foreach ($students as $student) {
+        $student['academic_year'] = $academicYear;
+        $student['school_name']   = $schoolName;
+        $student['class_name']    = $className;
+        $student['settings']      = $settings;
+        $student['level']         = $this->determineLevelFromClassName($className);
+        $student['exam_name']     = $examName;
+
+        ob_start();
+        include('../views/report.php');
+        $htmlArray[] = ob_get_clean();
+    }
+
+    return $htmlArray;
+}
+
 
     private function getGradingCriteria($className) {
         $level = $this->determineLevelFromClassName($className);
-
         if (!$level) return [];
 
-        $stmt = $this->conn->prepare("SELECT * FROM grading_criteria WHERE school_id = ? AND level = ? ORDER BY min_marks DESC");
-        $stmt->bind_param("is", $this->schoolId, $level);
+        $stmt = $this->conn->prepare("SELECT * FROM grading_criteria WHERE level = ? ORDER BY min_marks DESC");
+        $stmt->bind_param("s", $level);
         $stmt->execute();
         $result = $stmt->get_result();
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
-    function determineLevelFromClassName($className) {
+    private function determineLevelFromClassName($className) {
         $wordToDigit = [
             'one' => 1,
             'two' => 2,

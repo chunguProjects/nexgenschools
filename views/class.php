@@ -6,26 +6,23 @@ if (session_status() === PHP_SESSION_NONE) {
 
 include('../config/db.php');
 include('../model/class.php');
+include('../model/academic_year.php');
 
-// Ensure user is logged in and has a school_id
-$schoolId = $_SESSION['user']['school_id'] ?? null;
-if (!$schoolId) {
-    echo "<div class='alert alert-danger'>Unauthorized access. School not identified.</div>";
-    exit;
-}
-
-// Create class model and fetch classes for the current school
+// Create models
 $classModel = new ClassGroup($conn);
-$classes = $classModel->getAllClassesBySchool($schoolId);
+$ayModel = new AcademicYear($conn);
+
+// Fetch classes
+$classes = $classModel->getAllClasses();
 ?>
 
 <div class="container-fluid py-3">
     <!-- Navigation Buttons -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="schooladmin.php?page=dashboard" class="btn btn-outline-secondary">
+        <a href="admin.php?page=dashboard" class="btn btn-outline-secondary">
             <i class="fa fa-arrow-left"></i> Back
         </a>
-        <a href="schooladmin.php?page=add-class-form" class="btn btn-primary">
+        <a href="admin.php?page=add-class-form" class="btn btn-primary">
             <i class="fa-solid fa-plus"></i> Add Class
         </a>
     </div>
@@ -47,6 +44,7 @@ $classes = $classModel->getAllClassesBySchool($schoolId);
                         <th>Class Name</th>
                         <th>Description</th>
                         <th>Class Teacher</th>
+                        <th>Academic Year</th>
                         <th>Students</th>
                         <th>Actions</th>
                     </tr>
@@ -62,22 +60,30 @@ $classes = $classModel->getAllClassesBySchool($schoolId);
                             $teacherName = htmlspecialchars($class['teacher_name']);
                             $classId = (int)$class['class_id'];
 
+                            // Get academic year
+                            $academicYearName = '';
+                            if (!empty($class['academic_year_id'])) {
+                                $ay = $ayModel->getById($class['academic_year_id']);
+                                $academicYearName = $ay ? htmlspecialchars($ay['name']) : 'N/A';
+                            }
+
                             echo "
                                 <tr>
                                     <td>{$counter}</td>
                                     <td>
-                                        <a href='schooladmin.php?page=class-detail&class_id={$classId}' class='text-decoration-none text-primary fw-semibold'>
+                                        <a href='admin.php?page=class-detail&class_id={$classId}' class='text-decoration-none text-primary fw-semibold'>
                                             {$className}
                                         </a>
                                     </td>
                                     <td>{$description}</td>
                                     <td>{$teacherName}</td>
+                                    <td>{$academicYearName}</td>
                                     <td><span class='badge bg-secondary'>{$studentCount}</span></td>
                                     <td>
-                                        <a href='schooladmin.php?page=add-student-form&class_id={$classId}' class='btn btn-sm btn-success me-1' title='Add Students'>
+                                        <a href='admin.php?page=add-student-form&class_id={$classId}' class='btn btn-sm btn-success me-1' title='Add Students'>
                                             <i class='fa fa-user-plus'></i>
                                         </a>
-                                        <a href='schooladmin.php?page=add-class-form&class_id={$classId}' class='btn btn-sm btn-primary me-1' title='Edit Class'>
+                                        <a href='admin.php?page=add-class-form&class_id={$classId}' class='btn btn-sm btn-primary me-1' title='Edit Class'>
                                             <i class='fa fa-edit'></i>
                                         </a>
                                         <button class='btn btn-sm btn-danger deleteClassBtn' data-id='{$classId}' title='Delete Class'>
@@ -88,7 +94,7 @@ $classes = $classModel->getAllClassesBySchool($schoolId);
                             $counter++;
                         }
                     } else {
-                        echo "<tr><td colspan='6' class='text-center'>No classes found</td></tr>";
+                        echo "<tr><td colspan='7' class='text-center'>No classes found</td></tr>";
                     }
                     ?>
                 </tbody>

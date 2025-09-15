@@ -6,39 +6,33 @@ class Exams {
         $this->conn = $db;
     }
 
-    // Add new exam for a specific school (multi-tenancy)
-    public function addExam($examName, $term, $academicYear, $schoolId) {
-        $query = "INSERT INTO exams (exam_name, term, academic_year, school_id) VALUES (?, ?, ?, ?)";
+    // Add new exam
+    public function addExam($examName, $term, $academicYearId) {
+        $query = "INSERT INTO exams (exam_name, term, academic_year_id) VALUES (?, ?, ?)";
         $stmt = $this->conn->prepare($query);
 
-        if ($stmt) {
-            $stmt->bind_param("sssi", $examName, $term, $academicYear, $schoolId);
-            return $stmt->execute();
-        } else {
+        if (!$stmt) {
             error_log("Prepare failed in addExam: " . $this->conn->error);
             return false;
         }
+
+        $stmt->bind_param("ssi", $examName, $term, $academicYearId);
+        return $stmt->execute();
     }
 
-    // Get all exams, optionally filtered by school_id for multi-tenancy
-    public function getAllExams($schoolId = null) {
-        if ($schoolId !== null) {
-            $query = "SELECT id, exam_name, term, academic_year, created_at FROM exams WHERE school_id = ? ORDER BY created_at DESC";
-            $stmt = $this->conn->prepare($query);
-            if (!$stmt) {
-                error_log("Prepare failed in getAllExams: " . $this->conn->error);
-                return [];
-            }
-            $stmt->bind_param("i", $schoolId);
-            $stmt->execute();
-            $result = $stmt->get_result();
-        } else {
-            $query = "SELECT id, exam_name, term, academic_year, created_at FROM exams ORDER BY created_at DESC";
-            $result = $this->conn->query($query);
-            if (!$result) {
-                error_log("Query failed in getAllExams: " . $this->conn->error);
-                return [];
-            }
+    // Get all exams
+    public function getAllExams() {
+        $query = "
+            SELECT e.id, e.exam_name, e.term, e.academic_year_id, a.name AS academic_year_name, e.created_at
+            FROM exams e
+            LEFT JOIN academic_years a ON e.academic_year_id = a.academic_year_id
+            ORDER BY e.created_at DESC
+        ";
+        $result = $this->conn->query($query);
+
+        if (!$result) {
+            error_log("Query failed in getAllExams: " . $this->conn->error);
+            return [];
         }
 
         $exams = [];
@@ -50,27 +44,34 @@ class Exams {
 
     // Get exam by ID
     public function getExamById($id) {
-        $query = "SELECT * FROM exams WHERE id = ?";
+        $query = "
+            SELECT e.*, a.name AS academic_year_name
+            FROM exams e
+            LEFT JOIN academic_years a ON e.academic_year_id = a.academic_year_id
+            WHERE e.id = ?
+        ";
         $stmt = $this->conn->prepare($query);
         if (!$stmt) {
             error_log("Prepare failed in getExamById: " . $this->conn->error);
             return null;
         }
+
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->num_rows > 0 ? $result->fetch_assoc() : null;
+        return $result->fetch_assoc() ?: null;
     }
 
     // Update exam details by ID
-    public function updateExam($id, $examName, $term, $academicYear) {
-        $query = "UPDATE exams SET exam_name = ?, term = ?, academic_year = ? WHERE id = ?";
+    public function updateExam($id, $examName, $term, $academicYearId) {
+        $query = "UPDATE exams SET exam_name = ?, term = ?, academic_year_id = ? WHERE id = ?";
         $stmt = $this->conn->prepare($query);
         if (!$stmt) {
             error_log("Prepare failed in updateExam: " . $this->conn->error);
             return false;
         }
-        $stmt->bind_param("sssi", $examName, $term, $academicYear, $id);
+
+        $stmt->bind_param("ssii", $examName, $term, $academicYearId, $id);
         return $stmt->execute();
     }
 
@@ -82,42 +83,44 @@ class Exams {
             error_log("Prepare failed in deleteExam: " . $this->conn->error);
             return false;
         }
+
         $stmt->bind_param("i", $id);
         return $stmt->execute();
     }
 
-    // Optional: Get exam by term (not filtered by school; consider adding school filter if needed)
-    public function getExamByTerm($term) {
-        $query = "SELECT * FROM exams WHERE term = ?";
+    // Get exams filtered by term or academic year
+    public function getExams($term = null, $academicYearId = null) {
+        $query = "
+            SELECT e.id, e.exam_name, e.term, e.academic_year_id, a.name AS academic_year_name
+            FROM exams e
+            LEFT JOIN academic_years a ON e.academic_year_id = a.academic_year_id
+            WHERE 1=1
+        ";
+
+        $params = [];
+        $types = "";
+
+        if ($term) {
+            $query .= " AND e.term = ?";
+            $types .= "s";
+            $params[] = $term;
+        }
+        if ($academicYearId) {
+            $query .= " AND e.academic_year_id = ?";
+            $types .= "i";
+            $params[] = $academicYearId;
+        }
+
+        $query .= " ORDER BY e.created_at DESC";
+
         $stmt = $this->conn->prepare($query);
         if (!$stmt) {
-            error_log("Prepare failed in getExamByTerm: " . $this->conn->error);
-            return null;
+            error_log("Prepare failed in getExams: " . $this->conn->error);
+            return [];
         }
-        $stmt->bind_param("s", $term);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->num_rows > 0 ? $result->fetch_assoc() : null;
-    }
 
-    // Get all exams by school and optional term
-    public function getExamsBySchoolAndTerm($schoolId, $term = null) {
-        if ($term) {
-            $query = "SELECT id, exam_name FROM exams WHERE school_id = ? AND term = ?";
-            $stmt = $this->conn->prepare($query);
-            if (!$stmt) {
-                error_log("Prepare failed in getExamsBySchoolAndTerm: " . $this->conn->error);
-                return [];
-            }
-            $stmt->bind_param("is", $schoolId, $term);
-        } else {
-            $query = "SELECT id, exam_name FROM exams WHERE school_id = ?";
-            $stmt = $this->conn->prepare($query);
-            if (!$stmt) {
-                error_log("Prepare failed in getExamsBySchoolAndTerm: " . $this->conn->error);
-                return [];
-            }
-            $stmt->bind_param("i", $schoolId);
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
         }
 
         $stmt->execute();
@@ -130,23 +133,5 @@ class Exams {
 
         return $exams;
     }
-    public function getAcademicYearByClassAndTerm($classId, $term) {
-    $query = "
-        SELECT DISTINCT e.academic_year
-        FROM exams e
-        JOIN subjects s ON s.school_id = e.school_id
-        JOIN classes c ON c.school_id = e.school_id
-        WHERE c.class_id = ? AND e.term = ?
-        ORDER BY e.id DESC
-        LIMIT 1
-    ";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bind_param("is", $classId, $term);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    return $row ? $row['academic_year'] : null;
-}
-
 }
 ?>

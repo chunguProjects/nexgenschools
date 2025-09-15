@@ -9,9 +9,8 @@ session_start();
 // Get and validate parameters
 $class_id = $_GET['class_id'] ?? null;
 $exam_id = $_GET['exam_id'] ?? null;
-$school_id = $_SESSION['user']['school_id'] ?? null;
 
-if (!$class_id || !$exam_id || !$school_id) {
+if (!$class_id || !$exam_id ) {
     echo "<div class='alert alert-danger'>Missing required parameters.</div>";
     exit;
 }
@@ -21,11 +20,11 @@ $studentModel = new Student($conn);
 $students = $studentModel->getStudentsByClass($class_id);
 
 $subjectModel = new Subjects($conn);
-$subjects = $subjectModel->getAllSubjects($school_id);
+$subjects = $subjectModel->getAllSubjects();
 
 // Load existing grades
 $gradesModel = new Grades($conn);
-$existingGrades = $gradesModel->getGradesMap($school_id, $exam_id, $class_id); // returns [student_id][subject_id] => marks
+$existingGrades = $gradesModel->getGradesMap( $exam_id, $class_id); // returns [student_id][subject_id] => marks
 
 if (empty($students) || empty($subjects)) {
     echo "<div class='alert alert-warning'>No students or subjects found for this class.</div>";

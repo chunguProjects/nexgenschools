@@ -6,17 +6,11 @@ header('Content-Type: application/json');
 include('../config/db.php');
 include('../model/GradingCriteriaModel.php');
 
-$schoolId = $_SESSION['user']['school_id'] ?? null;
-if (!$schoolId) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
-
-$model = new GradingCriteriaModel($conn, $schoolId);
+$model = new GradingCriteriaModel($conn);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $level = $_POST['level'] ?? '';
+    $ids = $_POST['id'] ?? []; // optional IDs for existing rows
     $grades = $_POST['grade'] ?? [];
     $minMarks = $_POST['min_marks'] ?? [];
     $maxMarks = $_POST['max_marks'] ?? [];
@@ -30,13 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Clean previous criteria for this level
-    $model->deleteByLevel($level);
-
-    // Prepare new data
+    // Prepare data array
     $criteriaList = [];
     for ($i = 0; $i < count($grades); $i++) {
         $criteriaList[] = [
+            'id' => $ids[$i] ?? null, // existing ID if editing
             'level' => $level,
             'grade' => trim($grades[$i]),
             'min_marks' => (int)$minMarks[$i],
@@ -47,12 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
     }
 
-    $model->insertCriteriaBatch($criteriaList);
+    // Save (update existing or insert new)
+    $model->saveCriteriaBatch($criteriaList);
 
     echo json_encode(['success' => true, 'message' => 'Grading criteria saved successfully']);
     exit;
 }
-
 
 // Handle GET: Return criteria by level
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {

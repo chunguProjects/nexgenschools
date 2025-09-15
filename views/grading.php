@@ -1,17 +1,16 @@
 <div class="container mt-4">
   <!-- Back Button -->
- <div class="row align-items-center mb-3">
-  <div class="col-auto">
-    <a href="schooladmin.php?page=dashboard" class="btn btn-outline-secondary">
-      <i class="fa fa-arrow-left"></i> Back
-    </a>
+  <div class="row align-items-center mb-3">
+    <div class="col-auto">
+      <a href="schooladmin.php?page=dashboard" class="btn btn-outline-secondary">
+        <i class="fa fa-arrow-left"></i> Back
+      </a>
+    </div>
+    <div class="col text-center">
+      <h4 class="mb-0">Grading Criteria</h4>
+    </div>
+    <div class="col-auto"></div>
   </div>
-  <div class="col text-center">
-    <h4 class="mb-0">Grading Criteria</h4>
-  </div>
-  <div class="col-auto"></div> <!-- Placeholder to balance layout -->
-</div>
-
 
   <!-- Level Selection -->
   <div class="d-flex gap-2 mb-3">
@@ -31,7 +30,7 @@
             <th>Grade</th>
             <th>Min Marks</th>
             <th>Max Marks</th>
-            <th>Teacher Remark</th>
+            <th>Description</th>
             <th>Form Teacher Remark</th>
             <th>Head Teacher Remark</th>
             <th>Action</th>
@@ -56,16 +55,16 @@
 function selectLevel(level) {
   document.getElementById('level').value = level;
 
-  const buttons = document.querySelectorAll('.btn-outline-primary, .btn-outline-success');
+  // Highlight active button
+  const buttons = document.querySelectorAll('.level-button');
   buttons.forEach(btn => btn.classList.remove('active', 'btn-primary', 'btn-success'));
-
-  const activeBtn = Array.from(buttons).find(btn => btn.textContent.trim() === level);
+  const activeBtn = Array.from(buttons).find(btn => btn.dataset.level === level);
   if (activeBtn) {
     activeBtn.classList.add('active');
     activeBtn.classList.add(level === 'JCE' ? 'btn-primary' : 'btn-success');
   }
 
-  // Load existing criteria for selected level
+  // Load existing criteria
   loadCriteria(level);
 }
 
@@ -74,16 +73,14 @@ function loadCriteria(level) {
     .then(res => res.json())
     .then(data => {
       const tbody = document.getElementById('criteriaTable');
-      tbody.innerHTML = ''; // Clear table
+      tbody.innerHTML = '';
 
-      if (!Array.isArray(data)) {
-        console.error("Unexpected data format:", data);
-        return;
-      }
+      if (!Array.isArray(data)) return;
 
       data.forEach(c => {
         const row = document.createElement('tr');
         row.innerHTML = `
+          <input type="hidden" name="id[]" value="${c.id || ''}">
           <td><input type="text" name="grade[]" class="form-control" value="${c.grade}" required></td>
           <td><input type="number" name="min_marks[]" class="form-control" value="${c.min_marks}" required></td>
           <td><input type="number" name="max_marks[]" class="form-control" value="${c.max_marks}" required></td>
@@ -95,7 +92,7 @@ function loadCriteria(level) {
         tbody.appendChild(row);
       });
 
-      if (data.length === 0) addCriteriaRow(); // If no records, add an empty row
+      if (data.length === 0) addCriteriaRow();
     })
     .catch(err => {
       console.error("Failed to load grading criteria:", err);
@@ -103,11 +100,11 @@ function loadCriteria(level) {
     });
 }
 
-
 function addCriteriaRow() {
   const tbody = document.getElementById('criteriaTable');
   const row = document.createElement('tr');
   row.innerHTML = `
+    <input type="hidden" name="id[]" value="">
     <td><input type="text" name="grade[]" class="form-control" required></td>
     <td><input type="number" name="min_marks[]" class="form-control" required></td>
     <td><input type="number" name="max_marks[]" class="form-control" required></td>
@@ -119,40 +116,31 @@ function addCriteriaRow() {
   tbody.appendChild(row);
 }
 
-// Submit form via AJAX
-document.getElementById('gradingForm').addEventListener('submit', function (e) {
+document.getElementById('gradingForm').addEventListener('submit', function(e) {
   e.preventDefault();
-
-  const form = e.target;
-  const formData = new FormData(form);
+  const formData = new FormData(this);
   formData.append('level', document.getElementById('level').value);
 
   fetch('../controllers/gradingCriteriaController.php', {
     method: 'POST',
     body: formData
   })
-
-.then(async res => {
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Unknown error occurred');
-  }
-  return data;
-})
-.then(data => {
-  const statusDiv = document.getElementById('statusMessage');
-  statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-})
-.catch(err => {
-  document.getElementById('statusMessage').innerHTML = `<div class="alert alert-danger">Request failed: ${err.message}</div>`;
-  console.error("Form submission error:", err);
+  .then(async res => {
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Unknown error occurred');
+    return data;
+  })
+  .then(data => {
+    document.getElementById('statusMessage').innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+  })
+  .catch(err => {
+    document.getElementById('statusMessage').innerHTML = `<div class="alert alert-danger">Request failed: ${err.message}</div>`;
+    console.error("Form submission error:", err);
+  });
 });
 
-});
-
-// On load, set default level and first row
-document.addEventListener('DOMContentLoaded', function () {
+// Default load
+document.addEventListener('DOMContentLoaded', function() {
   selectLevel('JCE');
-  addCriteriaRow();
 });
 </script>

@@ -5,38 +5,50 @@ if (session_status() === PHP_SESSION_NONE) {
 include('../config/db.php');
 include('../model/class.php');
 
-// Get current school_id
-$schoolId = $_SESSION['user']['school_id'] ?? null;
-
-// Get messages
-$message = $_GET['message'] ?? null;
-$error   = $_GET['error'] ?? null;
+// Messages from session (better than GET)
+$message = $_SESSION['success'] ?? null;
+$error   = $_SESSION['error'] ?? null;
+unset($_SESSION['success'], $_SESSION['error']);
 
 // Determine if editing
 $isEdit = false;
 $classId = $_GET['class_id'] ?? null;
 $classData = [
-    'name'        => '',
-    'description' => '',
-    'teacher_id'  => ''
+    'name'           => '',
+    'description'    => '',
+    'teacher_id'     => '',
+    'academic_year_id' => ''
 ];
 
-if ($classId && $schoolId) {
+$classModel = new ClassGroup($conn);
+
+if ($classId) {
     $isEdit = true;
-    $classModel = new ClassGroup($conn);
     $class = $classModel->getClassById($classId);
 
-    if ($class && $class['school_id'] == $schoolId) {
+    if ($class) {
         $classData = [
-            'name'        => $class['name'],
-            'description' => $class['description'],
-            'teacher_id'  => $class['teacher_id']
+            'name'            => $class['name'],
+            'description'     => $class['description'],
+            'teacher_id'      => $class['teacher_id'],
+            'academic_year_id'=> $class['academic_year_id']
         ];
     } else {
-        $error = "Class not found or unauthorized access.";
+        $error = "Class not found.";
         $isEdit = false;
     }
 }
+
+// Fetch all teachers
+$teachers = $conn->query("
+    SELECT u.user_id, u.full_name
+    FROM users u
+    INNER JOIN roles r ON u.role_id = r.role_id
+    WHERE r.name = 'teacher'
+");
+
+// Fetch all academic years
+$academicYears = $conn->query("SELECT academic_year_id, name FROM academic_years ORDER BY start_date DESC");
 ?>
 
 <div class="container mt-5">
@@ -44,9 +56,9 @@ if ($classId && $schoolId) {
 
     <!-- Feedback -->
     <?php if ($message): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
+        <div class="alert alert-success" id="flash-message"><?= htmlspecialchars($message) ?></div>
     <?php elseif ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert-danger" id="flash-message"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form action="../controllers/class-controller.php" method="POST">
@@ -55,55 +67,53 @@ if ($classId && $schoolId) {
         <?php endif; ?>
 
         <!-- Class Name -->
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="name" class="form-label">Class Name</label>
-                <input type="text" class="form-control" id="name" name="name" value="<?= htmlspecialchars($classData['name']) ?>" placeholder="e.g., Form 1A" required>
-            </div>
+        <div class="mb-3">
+            <label for="name" class="form-label">Class Name</label>
+            <input type="text" class="form-control" id="name" name="name"
+                   value="<?= htmlspecialchars($classData['name']) ?>" placeholder="e.g., Form 1A" required>
         </div>
 
         <!-- Description -->
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="description" class="form-label">Description</label>
-                <input type="text" class="form-control" id="description" name="description" value="<?= htmlspecialchars($classData['description']) ?>" placeholder="e.g., Science stream" required>
-            </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <input type="text" class="form-control" id="description" name="description"
+                   value="<?= htmlspecialchars($classData['description']) ?>" placeholder="e.g., Science stream" required>
+        </div>
+
+        <!-- Academic Year -->
+        <div class="mb-3">
+            <label for="academic_year_id" class="form-label">Academic Year</label>
+            <select class="form-select" id="academic_year_id" name="academic_year_id" required>
+                <option value="" disabled <?= !$classData['academic_year_id'] ? 'selected' : '' ?>>Select Academic Year</option>
+                <?php if ($academicYears->num_rows > 0): ?>
+                    <?php while ($year = $academicYears->fetch_assoc()): ?>
+                        <option value="<?= $year['academic_year_id'] ?>"
+                            <?= ($year['academic_year_id'] == $classData['academic_year_id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($year['name']) ?>
+                        </option>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <option value="" disabled>No academic years found</option>
+                <?php endif; ?>
+            </select>
         </div>
 
         <!-- Class Teacher -->
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="teacher_id" class="form-label">Class Teacher</label>
-                <select class="form-select" id="teacher_id" name="teacher_id" required>
-                    <option value="" disabled <?= !$classData['teacher_id'] ? 'selected' : '' ?>>Select Teacher</option>
-                    <?php
-                    if ($schoolId) {
-                        $roleStmt = $conn->prepare("SELECT role_id FROM roles WHERE name = 'teacher'");
-                        $roleStmt->execute();
-                        $roleResult = $roleStmt->get_result();
-
-                        if ($roleRow = $roleResult->fetch_assoc()) {
-                            $teacherRoleId = $roleRow['role_id'];
-                            $stmt = $conn->prepare("SELECT user_id, full_name FROM users WHERE role_id = ? AND school_id = ?");
-                            $stmt->bind_param("ii", $teacherRoleId, $schoolId);
-                            $stmt->execute();
-                            $result = $stmt->get_result();
-
-                            while ($teacher = $result->fetch_assoc()) {
-                                $selected = ($teacher['user_id'] == $classData['teacher_id']) ? 'selected' : '';
-                                echo "<option value='{$teacher['user_id']}' $selected>{$teacher['full_name']}</option>";
-                            }
-
-                            if ($result->num_rows === 0) {
-                                echo "<option value='' disabled>No teachers found</option>";
-                            }
-                        } else {
-                            echo "<option value='' disabled>Teacher role not found</option>";
-                        }
-                    }
-                    ?>
-                </select>
-            </div>
+        <div class="mb-3">
+            <label for="teacher_id" class="form-label">Class Teacher</label>
+            <select class="form-select" id="teacher_id" name="teacher_id" required>
+                <option value="" disabled <?= !$classData['teacher_id'] ? 'selected' : '' ?>>Select Teacher</option>
+                <?php if ($teachers->num_rows > 0): ?>
+                    <?php while ($teacher = $teachers->fetch_assoc()): ?>
+                        <option value="<?= $teacher['user_id'] ?>"
+                            <?= ($teacher['user_id'] == $classData['teacher_id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($teacher['full_name']) ?>
+                        </option>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <option value="" disabled>No teachers found</option>
+                <?php endif; ?>
+            </select>
         </div>
 
         <!-- Buttons -->
@@ -111,7 +121,15 @@ if ($classId && $schoolId) {
             <button type="submit" name="<?= $isEdit ? 'update_class' : 'add_class' ?>" class="btn btn-primary me-2">
                 <?= $isEdit ? 'Update Class' : 'Add Class' ?>
             </button>
-            <a href="schooladmin.php?page=class" class="btn btn-secondary">Cancel</a>
+            <a href="admin.php?page=class" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+
+<script>
+    // Auto-disappear flash message after 3 seconds
+    const flash = document.getElementById('flash-message');
+    if (flash) {
+        setTimeout(() => { flash.style.display = 'none'; }, 3000);
+    }
+</script>
