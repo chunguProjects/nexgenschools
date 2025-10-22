@@ -38,6 +38,10 @@ function navItem($page, $label, $icon, $currentPage) {
         <?php endif; ?>
         <span><?= htmlspecialchars($schoolName) ?></span>
       </a>
+      
+       <button id="sidebar-close" class="btn btn-sm btn-outline-secondary d-md-none">
+        <i class="fa fa-times"></i>
+    </button>
     </div>
 
     <!-- Navigation -->

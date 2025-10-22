@@ -11,11 +11,8 @@ if (isset($_SESSION['user'])) {
     $roleId = $_SESSION['user']['role_id'] ?? null;
 
     switch ($roleId) {
-        case 1: header("Location: ../dashboard/superadmin.php"); exit;
-        case 2: header("Location: ../dashboard/schooladmin.php"); exit;
+        case 2: header("Location: ../dashboard/admin.php"); exit;
         case 3: header("Location: ../dashboard/teacher.php"); exit;
-        case 4: header("Location: ../dashboard/parent.php"); exit;
-        default: header("Location: ../dashboard/schooladmin.php"); exit;
     }
 }
 ?>

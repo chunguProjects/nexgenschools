@@ -133,5 +133,21 @@ class Exams {
 
         return $exams;
     }
+public function getExamsByYear(int $academicYearId): array {
+    $stmt = $this->conn->prepare("
+        SELECT id, exam_name, term, academic_year_id
+        FROM exams
+        WHERE academic_year_id = ?
+        ORDER BY created_at ASC
+    ");
+    $stmt->bind_param("i", $academicYearId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $exams = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $exams;
+}
+
+
 }
 ?>

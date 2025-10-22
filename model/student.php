@@ -84,53 +84,43 @@ class Student {
     // -----------------------------
     // Update Enrollment / Promotion
     // -----------------------------
-    public function updateEnrollment(int $studentId, int $classId): bool {
-        $academicYearId = $this->getAcademicYearIdByClass($classId);
+    public function updateEnrollment(int $studentId, int $classId, ?int $academicYearId = null): bool {
+    // Use provided academic year or get it from class
+    $academicYearId = $academicYearId ?? $this->getAcademicYearIdByClass($classId);
 
-        // Check if enrollment exists
+    // Check if enrollment exists
+    $stmt = $this->conn->prepare("
+        SELECT enrollment_id 
+        FROM student_enrollments 
+        WHERE student_id = ? AND academic_year_id = ? 
+        LIMIT 1
+    ");
+    $stmt->bind_param("ii", $studentId, $academicYearId);
+    $stmt->execute();
+    $existing = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($existing) {
+        // Update class_id and mark as promoted
         $stmt = $this->conn->prepare("
-            SELECT enrollment_id 
-            FROM student_enrollments 
-            WHERE student_id = ? AND academic_year_id = ? 
-            LIMIT 1
+            UPDATE student_enrollments
+            SET class_id = ?, promoted = 1
+            WHERE enrollment_id = ?
         ");
-        $stmt->bind_param("ii", $studentId, $academicYearId);
-        $stmt->execute();
-        $existing = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
-        if ($existing) {
-            // Update class_id
-            $stmt = $this->conn->prepare("
-                UPDATE student_enrollments
-                SET class_id = ?
-                WHERE enrollment_id = ?
-            ");
-            $stmt->bind_param("ii", $classId, $existing['enrollment_id']);
-        } else {
-            // Insert new enrollment
-            $stmt = $this->conn->prepare("
-                INSERT INTO student_enrollments (student_id, class_id, academic_year_id)
-                VALUES (?, ?, ?)
-            ");
-            $stmt->bind_param("iii", $studentId, $classId, $academicYearId);
-        }
-
-        $success = $stmt->execute();
-        $stmt->close();
-        return $success;
+        $stmt->bind_param("ii", $classId, $existing['enrollment_id']);
+    } else {
+        // Insert new enrollment with promoted = 1
+        $stmt = $this->conn->prepare("
+            INSERT INTO student_enrollments (student_id, class_id, academic_year_id, promoted)
+            VALUES (?, ?, ?, 1)
+        ");
+        $stmt->bind_param("iii", $studentId, $classId, $academicYearId);
     }
 
-    // -----------------------------
-    // Promote Students
-    // -----------------------------
-    public function promoteStudents(array $studentIds, int $nextClassId): array {
-        $results = [];
-        foreach ($studentIds as $studentId) {
-            $results[$studentId] = $this->updateEnrollment($studentId, $nextClassId);
-        }
-        return $results;
-    }
+    $success = $stmt->execute();
+    $stmt->close();
+    return $success;
+}
 
     // -----------------------------
     // Helpers
@@ -252,5 +242,51 @@ class Student {
         $stmt->close();
         return $success;
     }
+    public function promoteStudents(array $studentIds, int $targetClassId, int $targetAcademicYearId): array {
+    $this->conn->begin_transaction();
+
+    try {
+        $currentYearId = $this->getCurrentAcademicYearId();
+
+        foreach ($studentIds as $studentId) {
+            // ✅ Mark current enrollment as promoted/completed
+            $stmt = $this->conn->prepare("
+                UPDATE student_enrollments 
+                SET promoted = 1, status = 'completed'
+                WHERE student_id = ? AND academic_year_id = ?
+            ");
+            $stmt->bind_param("ii", $studentId, $currentYearId);
+            $stmt->execute();
+            $stmt->close();
+
+            // ✅ Insert new enrollment for the next academic year
+            $stmt = $this->conn->prepare("
+                INSERT INTO student_enrollments (student_id, class_id, academic_year_id)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE class_id = VALUES(class_id)
+            ");
+            $stmt->bind_param("iii", $studentId, $targetClassId, $targetAcademicYearId);
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to enroll student {$studentId}: " . $stmt->error);
+            }
+            $stmt->close();
+
+            // ✅ Update student's main record
+            $stmt = $this->conn->prepare("UPDATE students SET class_id = ? WHERE student_id = ?");
+            $stmt->bind_param("ii", $targetClassId, $studentId);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        $this->conn->commit();
+        return ['success' => true, 'message' => 'Students promoted successfully'];
+
+    } catch (Exception $e) {
+        $this->conn->rollback();
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+
 }
 ?>

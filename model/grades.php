@@ -66,7 +66,7 @@ class Grades
     }
 
     // Helper function: calculate letter grade from numeric mark and class level
-    private function calculateGrade($marks, $class_name)
+    public function calculateGrade($marks, $class_name)
     {
         // Extract level from class name like "1A", "Form 2", etc.
         preg_match('/\d+/', $class_name, $matches);
@@ -107,5 +107,28 @@ class Grades
 
         return $gradesMap;
     }
+
+    public function calculateGradeWithRemark($marks, $className) {
+    preg_match('/\d+/', $className, $matches);
+    $class_level = isset($matches[0]) ? (int)$matches[0] : 1;
+    $grading_level = in_array($class_level, [1,2]) ? 'Junior' : 'Senior';
+
+    $query = "SELECT grade, form_teacher_remark FROM grading_criteria 
+              WHERE level = ? AND ? BETWEEN min_marks AND max_marks LIMIT 1";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bind_param("si", $grading_level, $marks);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($row = $result->fetch_assoc()) {
+        return [
+            'grade' => $row['grade'],
+            'remark' => $row['form_teacher_remark'] ?? ''
+        ];
+    }
+
+    return ['grade' => 'N/A', 'remark' => ''];
+}
+
 }
 ?>

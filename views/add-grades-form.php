@@ -1,5 +1,4 @@
 <?php
-// Start session and check access
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 include('../config/db.php');
@@ -8,15 +7,25 @@ include('../model/exam.php');
 
 $exam_id = $_GET['exam_id'] ?? null;
 
-echo !$exam_id 
-    ? "<div class='alert alert-danger'>Missing exam context.</div>" 
-    : "";
+if (!$exam_id) {
+    echo "<div class='alert alert-danger'>Missing exam context.</div>";
+    exit;
+}
 
-if (!$exam_id) exit;
+// ✅ Get exam and its academic year
+$examModel = new Exams($conn);
+$exam = $examModel->getExamById($exam_id);
 
-// Load all classes (no school filter anymore)
+if (!$exam) {
+    echo "<div class='alert alert-danger'>Exam not found.</div>";
+    exit;
+}
+
+$academicYearId = $exam['academic_year_id'];
+
+// ✅ Get classes only for this academic year
 $classModel = new ClassGroup($conn);
-$classes    = $classModel->getAllClasses();
+$classes = $classModel->getClassesByYear($academicYearId);
 ?>
 
 <div class="container mt-4">
@@ -25,30 +34,27 @@ $classes    = $classModel->getAllClasses();
             <i class="fa fa-arrow-left"></i> Back
         </a>
         <h4 class="mb-0">Add Grades</h4>
-        <div></div> <!-- Empty div to keep layout balanced -->
+        <div></div>
     </div>
 
-    <!-- Class Selection -->
     <div class="mb-3">
         <label for="class_id" class="form-label">Select Class</label>
         <select name="class_id" id="class_id" class="form-select" required>
             <option value="">-- Select Class --</option>
             <?php foreach ($classes as $class): ?>
                 <option value="<?= $class['class_id'] ?>">
-                    <?= htmlspecialchars($class['class_name']) ?>
+                    <?= htmlspecialchars($class['name']) ?>
                 </option>
             <?php endforeach; ?>
         </select>
     </div>
 
-    <!-- Grade Entry Grid (Rendered Dynamically) -->
     <form id="gradesForm" action="../controllers/grades-controller.php" method="POST">
         <input type="hidden" name="exam_id" value="<?= htmlspecialchars($exam_id) ?>">
         <div id="grade-entry-grid" class="table-responsive"></div>
     </form>
 </div>
 
-<!-- JavaScript -->
 <script>
     const classSelect = document.getElementById('class_id');
     const gridContainer = document.getElementById('grade-entry-grid');
@@ -73,7 +79,6 @@ $classes    = $classModel->getAllClasses();
             });
     });
 
-    // Optional: Warn if submitting without changes
     gradesForm.addEventListener('submit', function (e) {
         const inputs = document.querySelectorAll('.grade-input');
         const hasFilled = [...inputs].some(input => input.value.trim() !== '');

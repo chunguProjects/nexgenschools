@@ -54,7 +54,12 @@ $classes = $classModel->getAllClasses();
                     if (!empty($classes)) {
                         $counter = 1;
                         foreach ($classes as $class) {
-                            $studentCount = $classModel->countStudentsInClass($class['class_id']);
+                            $academicYearId = $class['academic_year_id'] ?? 0;
+
+                            $currentCount = $classModel->countStudentsInClass($class['class_id'], $academicYearId, true);
+                            $totalCount   = $classModel->countStudentsInClass($class['class_id'], $academicYearId, false);
+
+                            $studentCountDisplay = "<span class='badge bg-secondary'>{$totalCount}";
                             $className = htmlspecialchars($class['class_name']);
                             $description = htmlspecialchars($class['description']);
                             $teacherName = htmlspecialchars($class['teacher_name']);
@@ -78,7 +83,7 @@ $classes = $classModel->getAllClasses();
                                     <td>{$description}</td>
                                     <td>{$teacherName}</td>
                                     <td>{$academicYearName}</td>
-                                    <td><span class='badge bg-secondary'>{$studentCount}</span></td>
+                                    <td>{$studentCountDisplay}</td>
                                     <td>
                                         <a href='admin.php?page=add-student-form&class_id={$classId}' class='btn btn-sm btn-success me-1' title='Add Students'>
                                             <i class='fa fa-user-plus'></i>

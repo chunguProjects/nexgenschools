@@ -29,24 +29,8 @@ class User {
         return $stmt->execute();
     }
 
-    /**
-     * Get all users with their role name
-     */
-    public function getAllUsers() {
-        $query = "
-            SELECT u.*, r.name AS role_name 
-            FROM users u
-            JOIN roles r ON u.role_id = r.role_id
-            ORDER BY u.full_name
-        ";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->get_result();
-    }
-
-    /**
-     * Get users by role
-     */
+     //Get users by role
+    
     public function getUsersByRoleId($role_id) {
         $query = "
             SELECT u.*, r.name AS role_name 

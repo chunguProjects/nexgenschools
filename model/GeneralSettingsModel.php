@@ -6,6 +6,17 @@ class GeneralSettingsModel {
         $this->conn = $conn;
     }
 
+     /**
+     * Get active academic year
+     */
+    public function getActiveAcademicYear(): ?array {
+        $query = "SELECT * FROM academic_years WHERE is_current = 1 LIMIT 1";
+        $result = $this->conn->query($query);
+        if ($result && $row = $result->fetch_assoc()) {
+            return $row;
+        }
+        return null;
+    }
     // Get settings (single-tenant, always the first row)
     public function getSettings() {
         $query = "SELECT * FROM settings LIMIT 1";

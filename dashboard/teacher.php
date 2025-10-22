@@ -4,6 +4,14 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role_name'] !== 'teacher') {
     header("Location: ../views/login.php");
     exit;
 }
+include('../config/db.php');
+require_once('../model/GeneralSettingsModel.php');
+
+$model = new GeneralSettingsModel($conn);
+$settings = $model->getSettings();
+
+$schoolName = $settings['school_name'] ?? 'School name';
+
 
 $currentPage = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
 ?>
@@ -11,7 +19,7 @@ $currentPage = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Teacher Panel - NextGen Schools</title>
+    <title><?=htmlspecialchars($schoolName)?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Styles -->

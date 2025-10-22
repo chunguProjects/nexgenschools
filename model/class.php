@@ -81,14 +81,31 @@ class ClassGroup {
         return $result->fetch_assoc() ?: null;
     }
 
-    public function countStudentsInClass($classId) {
-        $query = "SELECT COUNT(*) AS total FROM students WHERE class_id = ? AND is_deleted = 0";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $classId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->fetch_assoc()['total'] ?? 0;
+  public function countStudentsInClass(int $classId, ?int $academicYearId = null, bool $currentOnly = true): int {
+    $academicYearId = $academicYearId ?? 0; // pass 0 if not filtering by year
+    $query = "SELECT COUNT(*) AS total FROM student_enrollments WHERE class_id = ?";
+    $types = "i";
+    $params = [$classId];
+
+    if ($academicYearId) {
+        $query .= " AND academic_year_id = ?";
+        $types .= "i";
+        $params[] = $academicYearId;
     }
+
+    if ($currentOnly) {
+        $query .= " AND promoted = 0"; // only students currently in this class
+    }
+
+    $stmt = $this->conn->prepare($query);
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return (int)($res['total'] ?? 0);
+}
+
 
     public function updateClass($classId, $name, $description, $academicYearId, $teacherId = null) {
         $query = "UPDATE classes SET name = ?, description = ?, academic_year_id = ?, teacher_id = ? WHERE class_id = ?";
@@ -146,5 +163,137 @@ class ClassGroup {
             return false;
         }
     }
+
+public function getOrCreateNextClass(int $currentClassId, int $targetAcademicYearId): ?array {
+    // 1. Get current class
+    $currentClass = $this->getClassById($currentClassId);
+    if (!$currentClass) return null;
+
+    $currentName = trim($currentClass['name']); // e.g., "Form 2B"
+    $description = $currentClass['description'] ?? '';
+    $teacherId   = $currentClass['teacher_id'] ?? null;
+
+    // 2. Extract level (number) from class name
+    $currentLevel = 1;
+    if (preg_match('/(\d+)/', $currentName, $matches)) {
+        $currentLevel = (int)$matches[1];
+    }
+    $nextLevel = $currentLevel + 1;
+
+    // 3. Extract section (A, B, etc.)
+    $section = '';
+    if (preg_match('/([A-Z])$/i', $currentName, $secMatch)) {
+        $section = strtoupper($secMatch[1]); // Keep same section
+    }
+
+    // 4. Build next class name safely
+    if (preg_match('/(\d+)/', $currentName)) {
+        // Replace only the first number occurrence
+        $nextClassName = preg_replace('/\d+/', $nextLevel, $currentName, 1);
+    } else {
+        // Fallback if no number found in class name
+        $nextClassName = "Form {$nextLevel}{$section}";
+    }
+
+    // 5. Check if class already exists in target year
+    $query = "SELECT * FROM classes WHERE name = ? AND academic_year_id = ?";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bind_param("si", $nextClassName, $targetAcademicYearId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $existingClass = $result->fetch_assoc();
+    $stmt->close();
+
+    if ($existingClass) {
+        return $existingClass; // ✅ Return existing class if found
+    }
+
+    // 6. Create new class (use NULL for teacher if not set)
+    $insertQuery = "INSERT INTO classes (name, description, academic_year_id, teacher_id) VALUES (?, ?, ?, ?)";
+    $stmt = $this->conn->prepare($insertQuery);
+    if ($teacherId === null) {
+        // bind NULL explicitly
+        $null = null;
+        $stmt->bind_param("ssii", $nextClassName, $description, $targetAcademicYearId, $null);
+    } else {
+        $stmt->bind_param("ssii", $nextClassName, $description, $targetAcademicYearId, $teacherId);
+    }
+
+    if ($stmt->execute()) {
+        $newClassId = $this->conn->insert_id;
+        $stmt->close();
+
+        // 7. Assign all subjects to the new class
+        $subjectQuery = "SELECT subject_id FROM subjects";
+        $subjectResult = $this->conn->query($subjectQuery);
+        $insertClassSubject = $this->conn->prepare("INSERT INTO class_subjects (class_id, subject_id) VALUES (?, ?)");
+        while ($row = $subjectResult->fetch_assoc()) {
+            $subjectId = $row['subject_id'];
+            $insertClassSubject->bind_param("ii", $newClassId, $subjectId);
+            $insertClassSubject->execute();
+        }
+        $insertClassSubject->close();
+
+        // 8. Return newly created class
+        return $this->getClassById($newClassId);
+    }
+
+    $stmt->close();
+    return null;
+}
+public function getNextLevelClasses(int $currentClassId, int $targetAcademicYearId): array {
+    $currentClass = $this->getClassById($currentClassId);
+    if (!$currentClass) return [];
+
+    $currentName = trim($currentClass['name']);
+    $currentLevel = 1;
+
+    if (preg_match('/(\d+)/', $currentName, $matches)) {
+        $currentLevel = (int)$matches[1];
+    }
+    $nextLevel = $currentLevel + 1;
+
+    // Build pattern for LIKE query (find all classes in target year with this level)
+    $likePattern = "%{$nextLevel}%";
+
+    $query = "SELECT * FROM classes WHERE name LIKE ? AND academic_year_id = ?";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bind_param("si", $likePattern, $targetAcademicYearId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $classes = [];
+    while ($row = $result->fetch_assoc()) {
+        $classes[] = $row;
+    }
+    $stmt->close();
+
+    return $classes;
+}
+public function getClassesByYear(int $academicYearId): array {
+    $stmt = $this->conn->prepare("SELECT * FROM classes WHERE academic_year_id = ? ORDER BY name ASC");
+    $stmt->bind_param("i", $academicYearId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $classes = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $classes;
+}
+public function getTeacherClasses(int $teacherId, int $academicYearId): array {
+    $stmt = $this->conn->prepare("
+        SELECT *
+        FROM classes
+        WHERE teacher_id = ? AND academic_year_id = ?
+        ORDER BY name
+    ");
+    $stmt->bind_param("ii", $teacherId, $academicYearId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $classes = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $classes;
+}
+
+
 }
 ?>
