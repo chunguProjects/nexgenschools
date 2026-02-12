@@ -27,13 +27,6 @@ $allowedRolesResult = $conn->query("SELECT role_id, name FROM roles WHERE name I
 <div class="container mt-5">
     <h4 class="mb-4"><?= $isEdit ? 'Edit User' : 'Add New User' ?></h4>
 
-    <!-- Display error/success messages -->
-    <?php if (isset($_GET['error'])): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($_GET['error']) ?></div>
-    <?php elseif (isset($_GET['success'])): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($_GET['success']) ?></div>
-    <?php endif; ?>
-
     <form action="../controllers/user-controller.php" method="POST" onsubmit="return validateForm();">
         <?php if ($isEdit): ?>
             <input type="hidden" name="update_user" value="1">

@@ -16,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     $requiredFields = ['full_name', 'country_code', 'phone_number', 'username', 'email', 'password', 'role_id'];
     foreach ($requiredFields as $field) {
         if (empty($_POST[$field])) {
-            header("Location: ../views/add-user-form.php?error=Missing+required+field+$field");
+            $_SESSION['error'] = "Please fill in all required fields.";
+            header("Location: ../dashboard/admin.php?page=add-user-form");
             exit;
         }
     }
@@ -29,19 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     $password     = $_POST['password'];
     $role_id      = (int) $_POST['role_id'];
 
-    $result = $userModel->addUser($fullName, $countryCode, $phoneNumber, $username, $email, $password, $role_id);
-
-    if ($result) {
-        $redirectPage = match ($role_id) {
-            2 => 'user-admins',
-            3 => 'user-teachers',
-            4 => 'user-students',
-            default => 'user',
-        };
-        header("Location: ../views/index.php?page=$redirectPage&success=User+added+successfully");
-    } else {
-        header("Location: ../views/add-user-form.php?error=Failed+to+add+user");
+    if($userModel->addUser($fullName, $countryCode, $phoneNumber, $username, $email, $password, $role_id)){
+       $_SESSION['success'] ="User added successfully";
+    }else{
+        $_SESSION['error'] ="Failed to add user";
     }
+    
+        header("Location: ../dashboard/admin.php?page=add-user-form");
     exit;
 }
 
@@ -53,13 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'], $_POST
     $phoneNumber = trim($_POST['phone_number']);
     $password    = !empty($_POST['password']) ? $_POST['password'] : null;
 
-    $success = $userModel->updateUser($userId, $fullName, $email, $phoneNumber, $password);
-
-    if ($success) {
-        header("Location: ../views/index.php?page=user&success=User+updated+successfully");
-    } else {
-        header("Location: ../views/add-user-form.php?user_id=$userId&error=Failed+to+update+user");
+    if($userModel->updateUser($userId, $fullName, $email, $phoneNumber, $password)){
+        $_SESSION['success'] ="User updated successfully";
+    }else{
+        $_SESSION['error'] = "Failed to update the user.";
     }
+         header("Location: ../dashboard/admin.php?page=add-user-form");
     exit;
 }
 
@@ -67,13 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'], $_POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'], $_POST['user_id'])) {
     $userId = (int) $_POST['user_id'];
 
-    $deleted = $userModel->deleteUser($userId);
-
-    if ($deleted) {
-        header("Location: ../views/index.php?page=user&success=User+deleted+successfully");
-    } else {
-        header("Location: ../views/index.php?page=user&error=Failed+to+delete+user");
+    if($userModel->deleteUser($userId)){
+        $_SESSION['success'] = "User deleted successfully.";
+    }else{
+        $_SESSION['error'] = "Failed to delete user.";
     }
+    header("Location: ../dashboard/admin.php?page=user");
     exit;
 }
 ?>

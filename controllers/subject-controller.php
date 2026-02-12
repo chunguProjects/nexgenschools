@@ -14,7 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_subject'])) {
 
     // Basic validation
     if (empty($subjectName)) {
-        header("Location: ../view/add-subject-form.php?error=Missing+Subject+Name");
+        $_SESSION['error'] = "Missing subject name";
+        header("Location: ../dashboard/admin.php?page=add-subject-form");
         exit;
     }
 
@@ -22,17 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_subject'])) {
     $subjectCode = !empty($subjectCode) ? $subjectCode : null;
 
     try {
-        $result = $subjectModel->addSubject($subjectName, $subjectCode, $teacherId);
-        if ($result) {
-            header("Location: ../view/add-subject-form.php?message=Subject+Added+Successfully");
-            exit;
-        } else {
-            header("Location: ../view/add-subject-form.php?error=Subject+Already+Exists+or+DB+Error");
-            exit;
+        if($subjectModel->addSubject($subjectName, $subjectCode, $teacherId)){
+            $_SESSION['success'] = "Subject added successfully.";
+        }else{
+            $_SESSION['error'] = "Subject already exists.";
         }
+            header("Location: ../dashboard/admin.php?page=add-subject-form");
+            exit;
     } catch (Exception $e) {
         // Optional: log $e->getMessage()
-        header("Location: ../view/add-subject-form.php?error=Internal+Error");
+        $_SESSION['error'] = "Error adding subject";
+        header("Location: ../dashboard/admin.php?page=add-subject-form");
         exit;
     }
 }
@@ -44,13 +45,13 @@ if (isset($_POST['update_subject'])) {
     $code      = trim($_POST['subject_code']);
     $teacherId = (int)$_POST['teacher_id'];
 
-    $success = $subjectModel->updateSubject($subjectId, $name, $code, $teacherId);
+   if($subjectModel->updateSubject($subjectId, $name, $code, $teacherId)){
+        $_SESSION['success'] = "Subject updated successfully.";
 
-    if ($success) {
-        header("Location: ../views/schooladmin.php?page=subject&message=Subject+updated+successfully");
-    } else {
-        header("Location: ../views/schooladmin.php?page=subject&error=Update+failed");
-    }
+   }else{
+        $_SESSION['error'] = "Subject failed to update.";
+   }
+        header("Location: ../dashboard/admin.php?page=subject");
     exit;
 }
 
@@ -59,10 +60,12 @@ if (isset($_POST['delete_subject'])) {
     $subjectId = (int)$_POST['subject_id'];
 
     if ($subjectModel->deleteSubject($subjectId)) {
-        header("Location: ../views/schooladmin.php?page=subject&message=Subject+deleted+successfully");
+         $_SESSION['success'] = "Subject deleted successfully.";
+
     } else {
-        header("Location: ../views/schooladmin.php?page=subject&error=Failed+to+delete+subject");
+        $_SESSION['error'] = "Failed to delete subject.";
     }
+     header("Location: ../dashboard/admin.php?page=subject");
     exit;
 }
 ?>
