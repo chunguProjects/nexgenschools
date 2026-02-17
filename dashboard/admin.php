@@ -21,11 +21,11 @@ $currentPage = $_GET['page'] ?? 'dashboard';
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($schoolName) ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <link rel="stylesheet" href="../bootstrap-5.3.3-dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../bootstrap-5.3.3-dist/css/bootstrap.min.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /> 
+    <link rel="stylesheet" href="../css/style.css"> 
+    <script src="https://kit.fontawesome.com/ae360af17e.js" crossorigin="anonymous"></script>
 </head>
-
 <body>
 <div class="wrapper">
 
@@ -70,8 +70,9 @@ $currentPage = $_GET['page'] ?? 'dashboard';
     </div>
 </div>
 
+<script src="../js/script.js"></script> 
 <script src="../bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js"></script>
-<script src="../js/script.js"></script>
+<?php include('../views/modal-report.php'); ?>
 
 </body>
 </html>

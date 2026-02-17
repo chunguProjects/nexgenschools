@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deleteIds      = $_POST['delete_student'] ?? [];
 
     if (!$classId || empty($firstNames)) {
-        header("Location: ../view/add-students-form.php?class_id=$classId&error=missing_data");
+        header("Location: ../view/add-students-form.php?class_id=$classId&error=missing_dataz");
         exit();
     }
 

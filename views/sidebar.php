@@ -66,7 +66,7 @@ function navItem($page, $label, $icon, $currentPage) {
           <a href="admin.php?page=subject" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'subject' ? 'text-primary fw-semibold' : 'text-dark'; ?>">📚 Subjects</a>  
           <a href="admin.php?page=class" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'class' ? 'text-primary fw-semibold' : 'text-dark'; ?>">🏫 Classes</a>
           <a href="admin.php?page=exam" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'exam' ? 'text-primary fw-semibold' : 'text-dark'; ?>">📝 Exams</a>
-          <a href="admin.php?page=promotion" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'promotion' ? 'text-primary fw-semibold' : 'text-dark'; ?>">📝 promote studrnts</a>
+          <!-- <a href="admin.php?page=promotion" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'promotion' ? 'text-primary fw-semibold' : 'text-dark'; ?>">📝 promote studrnts</a> -->
 
         </div>
       </li>
@@ -87,7 +87,7 @@ function navItem($page, $label, $icon, $currentPage) {
       </li>
 
       <!-- Communication Dropdown -->
-      <li>
+      <!-- <li>
         <a class="d-flex align-items-center px-3 py-2 text-decoration-none text-dark collapsed"
            data-bs-toggle="collapse" href="#communicationMenu" aria-expanded="false">
           <i class="fa-solid fa-bullhorn me-2"></i>
@@ -98,10 +98,10 @@ function navItem($page, $label, $icon, $currentPage) {
           <a href="admin.php?page=announcements" class="d-block py-1 px-3 text-decoration-none text-dark">📢 Announcements</a>
           <a href="admin.php?page=messages" class="d-block py-1 px-3 text-decoration-none text-dark">💬 Messaging</a>
         </div>
-      </li>
+      </li> -->
 
       <!-- Finance Dropdown -->
-      <li>
+      <!-- <li>
         <a class="d-flex align-items-center px-3 py-2 text-decoration-none text-dark collapsed"
            data-bs-toggle="collapse" href="#financeMenu" aria-expanded="false">
           <i class="fa-solid fa-sack-dollar me-2"></i>
@@ -113,7 +113,7 @@ function navItem($page, $label, $icon, $currentPage) {
           <a href="admin.php?page=invoices" class="d-block py-1 px-3 text-decoration-none text-dark">📄 Invoices</a>
           <a href="admin.php?page=payments" class="d-block py-1 px-3 text-decoration-none text-dark">💳 Payments</a>
         </div>
-      </li>
+      </li> -->
 
       <!-- Settings -->
       <li>
@@ -126,7 +126,7 @@ function navItem($page, $label, $icon, $currentPage) {
         <div class="collapse ps-3 <?= in_array($currentPage ?? '', ['settings-general', 'settings-report', 'settings-communication']) ? 'show' : '' ?>" id="settingsMenu">
           <a href="admin.php?page=settings-general" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'settings-general' ? 'text-primary fw-semibold' : 'text-dark'; ?>">⚙️ General Settings</a>
           <a href="admin.php?page=settings-report" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'settings-report' ? 'text-primary fw-semibold' : 'text-dark'; ?>">📄 Report Settings</a>
-          <a href="admin.php?page=settings-communication" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'settings-communication' ? 'text-primary fw-semibold' : 'text-dark'; ?>">📢 Communication Settings</a>
+          <!-- <a href="admin.php?page=settings-communication" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'settings-communication' ? 'text-primary fw-semibold' : 'text-dark'; ?>">📢 Communication Settings</a> -->
         </div>
       </li>
 

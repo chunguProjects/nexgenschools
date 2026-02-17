@@ -34,10 +34,10 @@ CREATE TABLE classes (
     class_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     description TEXT,
-    teacher_id INT,
+    form_teacher_id INT,
     academic_year_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (form_teacher_id) REFERENCES users(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
     FOREIGN KEY (academic_year_id) REFERENCES academic_years(academic_year_id) ON DELETE CASCADE,
     UNIQUE (name, academic_year_id)
 );
@@ -46,9 +46,7 @@ CREATE TABLE subjects (
     subject_id INT AUTO_INCREMENT PRIMARY KEY,
     subject_name VARCHAR(100) NOT NULL UNIQUE,
     subject_code VARCHAR(20) NOT NULL UNIQUE,
-    teacher_id INT DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL ON UPDATE CASCADE
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE students (
@@ -127,25 +125,19 @@ CREATE TABLE settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE class_subjects (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    class_id INT NOT NULL,
-    subject_id INT NOT NULL,
-    FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
-    FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE,
-    UNIQUE (class_id, subject_id)
-);
-
 CREATE TABLE class_subject_teacher (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
     subject_id INT NOT NULL,
     teacher_id INT NOT NULL,
+    academic_year_id INT NOT NULL,
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
     FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    UNIQUE (class_id, subject_id)
+    FOREIGN KEY (academic_year_id) REFERENCES academic_years(academic_year_id) ON DELETE CASCADE,
+    UNIQUE (class_id, subject_id, academic_year_id)
 );
+
 
 CREATE TABLE student_enrollments (
     enrollment_id INT AUTO_INCREMENT PRIMARY KEY,
