@@ -30,7 +30,7 @@ if ($classId) {
         $classData = [
             'name'            => $class['name'],
             'description'     => $class['description'],
-            'teacher_id'      => $class['teacher_id'],
+            'form_teacher_id'      => $class['form_teacher_id'],
             'academic_year_id'=> $class['academic_year_id']
         ];
     } else {

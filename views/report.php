@@ -81,7 +81,7 @@ table.signature, table.form-remarks, table.grading-criteria { width: 100%; borde
 </style>
 
 <div class="report-container">
-    <!-- HEADER -->
+   <!-- HEADER -->
     <div class="header">
         <div class="header-logo">
             <?php if ($logoFullPath && file_exists($logoFullPath)): ?>

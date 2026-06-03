@@ -6,8 +6,12 @@ class AcademicYear {
         $this->conn = $conn;
     }
 
-    // ✅ Create new academic year
-    public function create($name, $start_date, $end_date, $is_current) {
+    // ✅ Create a new academic year
+    public function create(string $name, string $start_date, string $end_date, bool $is_current = false): int {
+        if ($is_current) {
+            $this->unsetCurrentYear(); // Ensure only one current year
+        }
+
         $stmt = $this->conn->prepare("
             INSERT INTO academic_years (name, start_date, end_date, is_current)
             VALUES (?, ?, ?, ?)
@@ -15,15 +19,23 @@ class AcademicYear {
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $this->conn->error);
         }
-        $stmt->bind_param("sssi", $name, $start_date, $end_date, $is_current);
+
+        $is_currentInt = $is_current ? 1 : 0;
+        $stmt->bind_param("sssi", $name, $start_date, $end_date, $is_currentInt);
+
         if (!$stmt->execute()) {
             throw new Exception("Execute failed: " . $stmt->error);
         }
+
         return $stmt->insert_id;
     }
 
-    // ✅ Update existing academic year
-    public function update($id, $name, $start_date, $end_date, $is_current) {
+    // ✅ Update an existing academic year
+    public function update(int $id, string $name, string $start_date, string $end_date, bool $is_current = false): bool {
+        if ($is_current) {
+            $this->unsetCurrentYear(); // Ensure only one current year
+        }
+
         $stmt = $this->conn->prepare("
             UPDATE academic_years
             SET name=?, start_date=?, end_date=?, is_current=?
@@ -32,12 +44,15 @@ class AcademicYear {
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $this->conn->error);
         }
-        $stmt->bind_param("sssii", $name, $start_date, $end_date, $is_current, $id);
+
+        $is_currentInt = $is_current ? 1 : 0;
+        $stmt->bind_param("sssii", $name, $start_date, $end_date, $is_currentInt, $id);
+
         return $stmt->execute();
     }
 
-    // ✅ Delete academic year
-    public function delete($id) {
+    // ✅ Delete an academic year
+    public function delete(int $id): bool {
         $stmt = $this->conn->prepare("DELETE FROM academic_years WHERE academic_year_id=?");
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $this->conn->error);
@@ -46,29 +61,47 @@ class AcademicYear {
         return $stmt->execute();
     }
 
-    // ✅ Get all years
-    public function getAll() {
+    // ✅ Get all academic years
+    public function getAll(): array {
         $result = $this->conn->query("SELECT * FROM academic_years ORDER BY start_date DESC");
         if (!$result) {
             throw new Exception("Query failed: " . $this->conn->error);
         }
-        return $result;
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
 
-    // ✅ Get current academic year (very useful for enrollment)
-    public function getCurrentYear() {
-        $stmt = $this->conn->query("SELECT * FROM academic_years WHERE is_current = 1 LIMIT 1");
-        return $stmt ? $stmt->fetch_assoc() : null;
+    // ✅ Get current academic year
+    public function getCurrentYear(): ?array {
+        $result = $this->conn->query("SELECT * FROM academic_years WHERE is_current = 1 LIMIT 1");
+        return $result ? $result->fetch_assoc() : null;
     }
 
-    // ✅ Get a single year by ID
-    public function getById($id) {
+    // ✅ Get a single academic year by ID
+    public function getById(int $id): ?array {
         $stmt = $this->conn->prepare("SELECT * FROM academic_years WHERE academic_year_id=? LIMIT 1");
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $this->conn->error);
         }
         $stmt->bind_param("i", $id);
         $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        $row = $stmt->get_result()->fetch_assoc();
+        return $row ?: null;
+    }
+
+    // ✅ Set a year as current (unsets others)
+    public function setCurrentYear(int $id): bool {
+        $this->unsetCurrentYear();
+        $stmt = $this->conn->prepare("UPDATE academic_years SET is_current = 1 WHERE academic_year_id = ?");
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $this->conn->error);
+        }
+        $stmt->bind_param("i", $id);
+        return $stmt->execute();
+    }
+
+    // ✅ Unset all current years
+    private function unsetCurrentYear(): bool {
+        return $this->conn->query("UPDATE academic_years SET is_current = 0");
     }
 }
+?>

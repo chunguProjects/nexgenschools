@@ -19,7 +19,7 @@ class Student {
             ");
 
             foreach ($students as $s) {
-                if (empty($s['first_name']) || empty($s['gender']) || empty($s['contact_number']) || empty($s['class_id']) || empty($s['date_of_birth'])) {
+                if (empty($s['first_name']) || empty($s['last_name']) || empty($s['gender']) || empty($s['class_id']) ) {
                     throw new Exception("Missing required student data.");
                 }
 
@@ -209,28 +209,37 @@ class Student {
     // -----------------------------
     // Registration Number Generator
     // -----------------------------
-    private function generateRegistrationNumber(int $classId): string {
-        $stmt = $this->conn->prepare("SELECT name FROM classes WHERE class_id = ? LIMIT 1");
-        $stmt->bind_param("i", $classId);
-        $stmt->execute();
-        $res = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
+   private function generateRegistrationNumber(int $classId): string {
 
-        $className = $res['name'] ?? 'Form1';
-        preg_match('/(\d+)/', $className, $matches);
-        $level = $matches[1] ?? 1;
+    $year = date('Y');
 
-        $year = date('Y') - ($level - 1);
-        $like = "STU{$year}-%";
+    // Lock table to prevent race conditions
+    $stmt = $this->conn->prepare("
+        SELECT username 
+        FROM students 
+        WHERE username LIKE ?
+        ORDER BY student_id DESC 
+        LIMIT 1
+    ");
 
-        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM students WHERE username LIKE ?");
-        $stmt->bind_param("s", $like);
-        $stmt->execute();
-        $cnt = $stmt->get_result()->fetch_assoc()['cnt'] ?? 0;
-        $stmt->close();
+    $like = "STU{$year}-%";
+    $stmt->bind_param("s", $like);
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
-        return sprintf("STU%s-%03d", $year, $cnt + 1);
+    if (!$res) {
+        return "STU{$year}-001";
     }
+
+    // Extract last number
+    preg_match('/(\d+)$/', $res['username'], $matches);
+    $lastNumber = isset($matches[1]) ? (int)$matches[1] : 0;
+
+    $next = $lastNumber + 1;
+
+    return sprintf("STU%s-%03d", $year, $next);
+}
 
     // -----------------------------
     // Delete Student

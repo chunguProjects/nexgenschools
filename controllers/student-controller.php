@@ -8,7 +8,9 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $studentModel = new Student($conn);
 
+# ================= HANDLE POST =================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $classId        = $_POST['class_id'] ?? null;
     $studentIds     = $_POST['student_id'] ?? [];
     $firstNames     = $_POST['first_name'] ?? [];
@@ -19,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deleteIds      = $_POST['delete_student'] ?? [];
 
     if (!$classId || empty($firstNames)) {
-        header("Location: ../view/add-students-form.php?class_id=$classId&error=missing_dataz");
+        $_SESSION['error'] = "Missing required student data.";
+        header("Location: ../dashboard/admin.php?page=add-student-form?class_id=$classId");
         exit();
     }
 
@@ -27,7 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
 
     foreach ($firstNames as $index => $firstName) {
+
         $id = trim($studentIds[$index] ?? '');
+
         $data = [
             'first_name'     => trim($firstName),
             'last_name'      => trim($lastNames[$index] ?? ''),
@@ -37,63 +42,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'contact_number' => trim($contactNumbers[$index] ?? '')
         ];
 
-        // --- Row validation ---
+        # -------- VALIDATION --------
         $rowErrors = [];
-        if (empty($data['first_name'])) $rowErrors[] = "First name required";
-        if (empty($data['gender']) || !in_array($data['gender'], ['Male','Female'])) $rowErrors[] = "Gender must be Male or Female";
-        if (empty($data['contact_number'])) $rowErrors[] = "Contact number required";
-        if (!empty($data['date_of_birth']) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['date_of_birth'])) $rowErrors[] = "Invalid DOB format";
+
+        if (empty($data['first_name'])) {
+            $rowErrors[] = "First name required";
+        }
+
+        if (empty($data['gender']) || !in_array($data['gender'], ['Male', 'Female'])) {
+            $rowErrors[] = "Gender must be Male or Female";
+        }
+
+        if (empty($data['contact_number'])) {
+            $rowErrors[] = "Contact number required";
+        }
+
+        if (!empty($data['date_of_birth']) &&
+            !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['date_of_birth'])) {
+            $rowErrors[] = "Invalid DOB format";
+        }
 
         if ($rowErrors) {
-            $errors[] = "Row ".($index+1).": ".implode(", ", $rowErrors);
+            $errors[] = "Row " . ($index + 1) . ": " . implode(", ", $rowErrors);
             continue;
         }
 
+        # -------- NEW STUDENT --------
         if ($id === '') {
-            // New student
             $newStudents[] = $data;
+            continue;
+        }
+
+        # -------- DELETE STUDENT --------
+        if (in_array($id, $deleteIds)) {
+
+            if (!$studentModel->deleteStudent((int)$id)) {
+                $errors[] = "Failed to delete student ID $id";
+            }
+
         } else {
-            if (in_array($id, $deleteIds)) {
-                if (!$studentModel->deleteStudent((int)$id)) {
-                    $errors[] = "Failed to delete student ID $id";
-                }
-            } else {
-                if (!$studentModel->updateStudent((int)$id, $data)) {
-                    $errors[] = "Failed to update student ID $id";
-                } 
-                // Enrollment update handled inside updateStudent()
+            # -------- UPDATE STUDENT --------
+            if (!$studentModel->updateStudent((int)$id, $data)) {
+                $errors[] = "Failed to update student ID $id";
             }
         }
     }
 
-    // Add new students
-    if ($newStudents) {
+    # -------- ADD NEW STUDENTS --------
+    if (!empty($newStudents)) {
         $result = $studentModel->addStudents($newStudents);
+
         if (!$result['success']) {
-            $errors[] = "Adding new students failed: ".($result['message'] ?? "Unknown error");
+            $errors[] = "Adding new students failed: " . ($result['message'] ?? "Unknown error");
         }
     }
 
-    if ($errors) {
-        $errorMsg = urlencode(implode(" | ", $errors));
-        header("Location: ../view/add-students-form.php?class_id=$classId&error=$errorMsg");
+    # -------- FINAL RESPONSE --------
+    if (!empty($errors)) {
+        $_SESSION['error'] = implode(" | ", $errors);
+        
+        header("Location: ../dashboard/admin.php?page=add-student-form?class_id=$classId");
+       
     } else {
-        header("Location: ../view/class.php?success=students_saved");
-    }
+        $_SESSION['success'] = "Students saved successfully.";
+        header("Location: ../dashboard/admin.php?page=add-student-form&class_id=$classId");    }
+
     exit();
 }
 
-// --- Handle AJAX request ---
+# ================= HANDLE AJAX =================
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['class_id'])) {
+
     $classId  = (int)$_GET['class_id'];
     $students = $studentModel->getStudentsByClass($classId);
 
     header('Content-Type: application/json');
+
     echo json_encode(
         $students
             ? ['success' => true, 'students' => $students]
             : ['success' => false, 'message' => 'No students found']
     );
+
     exit();
 }
+
 ?>

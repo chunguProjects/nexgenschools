@@ -125,17 +125,23 @@ CREATE TABLE settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE class_subject_teacher (
+CREATE TABLE class_subject (
     id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
     subject_id INT NOT NULL,
-    teacher_id INT NOT NULL,
     academic_year_id INT NOT NULL,
-    FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
-    FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE,
-    FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (academic_year_id) REFERENCES academic_years(academic_year_id) ON DELETE CASCADE,
-    UNIQUE (class_id, subject_id, academic_year_id)
+    UNIQUE KEY (class_id, subject_id, academic_year_id),
+    FOREIGN KEY (class_id) REFERENCES classes(class_id),
+    FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
+    FOREIGN KEY (academic_year_id) REFERENCES academic_years(academic_year_id)
+);
+
+CREATE TABLE class_subject_teacher (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_subject_id INT NOT NULL,
+    teacher_id INT,
+    FOREIGN KEY (class_subject_id) REFERENCES class_subject(id),
+    FOREIGN KEY (teacher_id) REFERENCES users(user_id)
 );
 
 

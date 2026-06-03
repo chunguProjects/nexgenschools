@@ -73,38 +73,110 @@ $exams = $examModel->getExamsByYear($academicYearId);
         <div id="grade-entry-grid" class="table-responsive"></div>
     </form>
 </div>
-
 <script>
 const examSelect = document.getElementById('exam_id');
 const gridContainer = document.getElementById('grade-entry-grid');
 const gradesForm = document.getElementById('gradesForm');
 
-examSelect.addEventListener('change', function () {
-    const examId = this.value;
-    gridContainer.innerHTML = !examId
-        ? '<div class="alert alert-warning">Please select an exam.</div>'
-        : '<div class="text-muted">Loading grade grid...</div>';
+// Success/Error message area
+const messageBox = document.createElement('div');
+messageBox.id = 'gradeMessage';
+gradesForm.parentNode.insertBefore(messageBox, gradesForm);
 
-    if (!examId) return;
+// Load grade grid
+function loadGradeGrid() {
+    const examId = examSelect.value;
 
-    fetch(`../views/render-grade-grid.php?class_id=<?= $classId ?>&exam_id=${examId}&teacher_id=<?= $teacherId ?>`)
+    if (!examId) {
+        gridContainer.innerHTML =
+            '<div class="alert alert-warning">Please select an exam.</div>';
+        return;
+    }
+
+    gridContainer.innerHTML =
+        '<div class="text-muted">Loading grade grid...</div>';
+
+    fetch(`../views/render-grade-grid-teacher.php?class_id=<?= $classId ?>&exam_id=${examId}`)
         .then(res => res.text())
         .then(html => {
-            // Inject the grid WITHOUT any buttons
             gridContainer.innerHTML = html;
         })
         .catch(err => {
             console.error(err);
-            gridContainer.innerHTML = '<div class="alert alert-danger">Failed to load grade grid.</div>';
+            gridContainer.innerHTML =
+                '<div class="alert alert-danger">Failed to load grade grid.</div>';
         });
-});
+}
 
-gradesForm.addEventListener('submit', function (e) {
+// Exam changed
+examSelect.addEventListener('change', loadGradeGrid);
+
+// Save grades
+gradesForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
     const inputs = document.querySelectorAll('.grade-input');
     const hasFilled = [...inputs].some(input => input.value.trim() !== '');
+
     if (!hasFilled) {
-        e.preventDefault();
         alert('No grades entered or modified.');
+        return;
     }
+
+    const formData = new FormData(gradesForm);
+
+    fetch(gradesForm.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(async res => {
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.message || 'Failed to save grades.');
+        }
+
+        return data;
+    })
+    .then(data => {
+
+        // Show success message
+        messageBox.innerHTML = `
+            <div class="alert alert-success alert-dismissible fade show">
+                ${data.message || 'Grades saved successfully.'}
+            </div>
+        `;
+
+        // Reload grade grid with saved values
+        loadGradeGrid();
+
+        // Auto-hide message after 3 seconds
+        setTimeout(() => {
+            const alert = messageBox.querySelector('.alert');
+
+            if (alert) {
+                alert.classList.remove('show');
+
+                setTimeout(() => {
+                    messageBox.innerHTML = '';
+                }, 500);
+            }
+        }, 3000);
+
+    })
+    .catch(err => {
+
+        messageBox.innerHTML = `
+            <div class="alert alert-danger alert-dismissible fade show">
+                ${err.message}
+            </div>
+        `;
+
+        setTimeout(() => {
+            messageBox.innerHTML = '';
+        }, 4000);
+
+        console.error(err);
+    });
 });
 </script>

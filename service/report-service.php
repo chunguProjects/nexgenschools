@@ -23,20 +23,23 @@ class StudentReportService {
     $gradesModel  = new Grades($this->conn);
     $subjectModel = new Subjects($this->conn);
     $examModel    = new Exams($this->conn);
-    $schoolModel  = new School($this->conn);
+  
 
     $students = $studentModel->getStudentsByClass($classId);
-    $subjects = $subjectModel->getSubjectsByClass($classId);
+
+    // ✅ Fetch exam and academic year FIRST
+    $examInfo = $examModel->getExamById($examId);
+    $examName = $examInfo['exam_name'] ?? '';
+    $academicYearId = $examInfo['academic_year_id'] ?? null;
+
+    // ✅ NOW subjects will work correctly
+    $subjects = $subjectModel->getSubjectsByClass($classId, $academicYearId);
+
     $grades   = $gradesModel->getGradesByClassTermExam($classId, $term, $examId);
 
     $class = $classModel->getClassById($classId);
     $className = $class['name'] ?? 'N/A';
     $gradingCriteria = $this->getGradingCriteria($className);
-
-    // ✅ Fetch exam and academic year info
-    $examInfo = $examModel->getExamById($examId);
-    $examName = $examInfo['exam_name'] ?? '';
-    $academicYearId = $examInfo['academic_year_id'] ?? null;
 
     $academicYear = null;
     if ($academicYearId) {

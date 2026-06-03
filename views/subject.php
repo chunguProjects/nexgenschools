@@ -50,7 +50,6 @@ $error   = $_GET['error'] ?? null;
                         <th>ID</th>
                         <th>Subject Name</th>
                         <th>Code</th>
-                        <th>Subject Teacher</th>
                         <th style="width: 150px;">Actions</th>
                     </tr>
                 </thead>
@@ -61,15 +60,20 @@ $error   = $_GET['error'] ?? null;
                                 <td><?= $subject['subject_id'] ?></td>
                                 <td><?= htmlspecialchars($subject['subject_name']) ?></td>
                                 <td><?= htmlspecialchars($subject['subject_code'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($subject['teacher_name'] ?? 'Unassigned') ?></td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary editSubjectBtn" data-id="<?= $subject['subject_id'] ?>">
-                                        <i class="fa fa-edit"></i> Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-danger deleteSubjectBtn" data-id="<?= $subject['subject_id'] ?>">
-                                        <i class="fa fa-trash"></i> Delete
-                                    </button>
-                                </td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary editSubjectBtn"
+                                data-id="<?= $subject['subject_id'] ?>">
+                            <i class="fa fa-edit"></i>
+                        </button>
+
+                        <button class="btn btn-sm btn-danger deleteSubjectBtn"
+                                data-id="<?= $subject['subject_id'] ?>">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>

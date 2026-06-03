@@ -1,50 +1,95 @@
 <?php
 session_start();
-include('../config/db.php'); // Database connection
-include('../model/grades.php'); // Grades model
+header('Content-Type: application/json');
 
-// Get and sanitize POST data
-$exam_id = isset($_POST['exam_id']) ? (int)$_POST['exam_id'] : null;
-$class_id = isset($_POST['class_id']) ? (int)$_POST['class_id'] : null;
+include('../config/db.php');
+include('../model/grades.php');
+
+$exam_id = isset($_POST['exam_id']) ? (int)$_POST['exam_id'] : 0;
+$class_id = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
 $grades = $_POST['grades'] ?? [];
 
 if (!$exam_id || !$class_id || empty($grades)) {
-    die("Invalid request - Missing required fields.");
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Missing required fields.'
+    ]);
+    exit;
 }
 
-// Initialize Grades model
 $gradesModel = new Grades($conn);
 
-// Loop over the grades matrix: grades[student_id][subject_id] = mark
-foreach ($grades as $student_id => $subjectGrades) {
-    foreach ($subjectGrades as $subject_id => $mark) {
-        $student_id = (int)$student_id;
-        $subject_id = (int)$subject_id;
-        $mark = trim($mark);
+try {
 
-        // Skip empty entries
-        if ($mark === '') continue;
+    foreach ($grades as $student_id => $subjectGrades) {
 
-        // Validate marks
-        if (!is_numeric($mark) || $mark < 0 || $mark > 100) {
-            die("Invalid mark ($mark) for student $student_id, subject $subject_id");
-        }
+        foreach ($subjectGrades as $subject_id => $mark) {
 
-        // Check if grade already exists
-        $existing = $gradesModel->getGrade($exam_id, $class_id, $subject_id, $student_id);
+            $student_id = (int)$student_id;
+            $subject_id = (int)$subject_id;
+            $mark = trim($mark);
 
-        if ($existing) {
-            $success = $gradesModel->updateGrade($exam_id, $class_id, $subject_id, $student_id, $mark);
-        } else {
-            $success = $gradesModel->insertGrade($exam_id, $class_id, $subject_id, $student_id, $mark);
-        }
+            // Skip blank grades
+            if ($mark === '') {
+                continue;
+            }
 
-        if (!$success) {
-            die("Failed to save grade for student ID: $student_id, subject ID: $subject_id");
+            if (!is_numeric($mark) || $mark < 0 || $mark > 100) {
+                throw new Exception(
+                    "Invalid mark ($mark) for student $student_id"
+                );
+            }
+
+            $existing = $gradesModel->getGrade(
+                $exam_id,
+                $class_id,
+                $subject_id,
+                $student_id
+            );
+
+            if ($existing) {
+
+                $success = $gradesModel->updateGrade(
+                    $exam_id,
+                    $class_id,
+                    $subject_id,
+                    $student_id,
+                    $mark
+                );
+
+            } else {
+
+                $success = $gradesModel->insertGrade(
+                    $exam_id,
+                    $class_id,
+                    $subject_id,
+                    $student_id,
+                    $mark
+                );
+            }
+
+            if (!$success) {
+                throw new Exception(
+                    "Failed to save grade for student ID {$student_id}"
+                );
+            }
         }
     }
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Grades saved successfully.'
+    ]);
+
+} catch (Exception $e) {
+
+    http_response_code(500);
+
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage()
+    ]);
 }
 
-// Redirect with success message
-header("Location: ../view/success.php?message=Grades saved successfully");
 exit;

@@ -48,17 +48,17 @@ $classes = $classModel->getTeacherClasses($teacherId, $academicYearId);
                     <?php if (!empty($classes)): ?>
                         <?php foreach ($classes as $class): ?>
                             <?php 
-                                $studentCount = $classModel->countStudentsInClass($class['class_id'], $academicYearId, true); 
+                                $studentCount = $classModel->countStudentsInClass($class['class_id'], $academicYearId); 
                             ?>
                             <tr>
                                 <td><?= htmlspecialchars($class['name']) ?></td>
                                 <td><?= htmlspecialchars($class['description']) ?></td>
                                 <td><?= $studentCount ?></td>
                                 <td>
-                                    <a href="teacher.php?page=view-students&class_id=<?= $class['class_id'] ?>" 
+                                    <!-- <a href="teacher.php?page=view-students&class_id=<?= $class['class_id'] ?>" 
                                        class="btn btn-sm btn-outline-primary">
                                         View Students
-                                    </a>
+                                    </a> -->
                                     <a href="teacher.php?page=enter-grades&class_id=<?= $class['class_id'] ?>" 
                                        class="btn btn-sm btn-outline-success">
                                         Enter Grades

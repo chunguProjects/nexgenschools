@@ -26,7 +26,7 @@ class GradingCriteriaModel {
 
    public function saveCriteriaBatch($criteriaList) {
     foreach ($criteriaList as $c) {
-        if (!empty($c['id'])) {
+        if (!empty($c['id']) && is_numeric($c['id'])) {
             // Update existing row
             $this->updateCriteria($c['id'], $c);
         } else {

@@ -1,17 +1,9 @@
-<style>
-  /* Increase modal height and set a max width */
-  #generateReportModal .modal-dialog {
-    max-width: 500px;
-  }
-  #generateReportModal .modal-content {
-    min-height: 380px;
-  }
-</style>
+
 
 <!-- Modal -->
 <div class="modal fade" id="generateReportModal" tabindex="-1" aria-labelledby="generateReportModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
+  <div class="modal-dialog" style="max-width:500px;">
+    <div class="modal-content" style="min-height:500px;">
 
       <div class="modal-header">
         <h5 class="modal-title" id="generateReportModalLabel">Generate Report</h5>
@@ -22,82 +14,60 @@
         <form id="generateReportForm" method="POST" action="../controllers/report-controller.php" target="_blank">
           <?php
           include('../config/db.php');
+          if (session_status() === PHP_SESSION_NONE) session_start();
+          ?>
 
-          if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+         <!-- Select Academic Year -->
+           <div class="mb-3">
+          <label class="form-label">Select Academic Year</label>
+
+          <select name="academic_year_id" id="academic_year_id" class="form-select" required>
+
+          <option value="" selected disabled>-- Select Academic Year --</option>
+
+          <?php
+          $stmt = $conn->prepare("
+          SELECT academic_year_id, name 
+          FROM academic_years 
+          ORDER BY name DESC
+          ");
+
+          $stmt->execute();
+          $result = $stmt->get_result();
+
+          while ($row = $result->fetch_assoc()) {
+          echo "<option value='{$row['academic_year_id']}'>{$row['name']}</option>";
           }
           ?>
 
-          <!-- Select Class -->
-          <div class="mb-3">
-            <label for="class_id" class="form-label">Select Class</label>
+          </select>
+          </div>
+
+
+            <!-- Class -->
+            <div class="mb-3">
+            <label class="form-label">Select Class</label>
             <select name="class_id" id="class_id" class="form-select" required>
-              <?php
-              $stmtClass = $conn->prepare("SELECT class_id, name FROM classes");
-              if ($stmtClass->execute()) {
-                $resultClass = $stmtClass->get_result();
-                if ($resultClass->num_rows > 0) {
-                  while ($row = $resultClass->fetch_assoc()) {
-                    echo "<option value='" . htmlspecialchars($row['class_id']) . "'>" . htmlspecialchars($row['name']) . "</option>";
-                  }
-                } else {
-                  echo "<option disabled>No classes found</option>";
-                }
-              } else {
-                echo "<option disabled>Error fetching classes</option>";
-              }
-              $stmtClass->close();
-              ?>
+            <option value="">Select academic year first</option>
             </select>
-          </div>
+            </div>
 
-          <!-- Select Term -->
-          <div class="mb-3">
-            <label for="term" class="form-label">Select Term</label>
+            <!-- Term -->
+            <div class="mb-3">
+            <label class="form-label">Select Term</label>
             <select name="term" id="term" class="form-select" required>
-              <?php
-              $stmtTerm = $conn->prepare("SELECT DISTINCT term FROM exams");
-              if ($stmtTerm->execute()) {
-                $resultTerm = $stmtTerm->get_result();
-                if ($resultTerm->num_rows > 0) {
-                  while ($termRow = $resultTerm->fetch_assoc()) {
-                    echo "<option value='" . htmlspecialchars($termRow['term']) . "'>" . htmlspecialchars($termRow['term']) . "</option>";
-                  }
-                } else {
-                  echo '<option value="1">Term 1</option>';
-                  echo '<option value="2">Term 2</option>';
-                  echo '<option value="3">Term 3</option>';
-                }
-              } else {
-                echo '<option disabled>Error fetching terms</option>';
-              }
-              $stmtTerm->close();
-              ?>
+            <option value="">Select academic year first</option>
             </select>
-          </div>
+            </div>
 
-          <!-- Select Exam -->
-          <div class="mb-3">
-            <label for="exam_id" class="form-label">Select Exam</label>
+            <!-- Exam -->
+            <div class="mb-3">
+            <label class="form-label">Select Exam</label>
             <select name="exam_id" id="exam_id" class="form-select" required>
-              <?php
-              $stmtExam = $conn->prepare("SELECT id, exam_name FROM exams");
-              if ($stmtExam->execute()) {
-                $resultExam = $stmtExam->get_result();
-                if ($resultExam->num_rows > 0) {
-                  while ($exam = $resultExam->fetch_assoc()) {
-                    echo "<option value='" . htmlspecialchars($exam['id']) . "'>" . htmlspecialchars($exam['exam_name']) . "</option>";
-                  }
-                } else {
-                  echo "<option disabled>No exams found</option>";
-                }
-              } else {
-                echo "<option disabled>Error fetching exams</option>";
-              }
-              $stmtExam->close();
-              ?>
+            <option value="">Select academic year first</option>
             </select>
-          </div>
+            </div>
+
 
           <button type="submit" class="btn btn-primary w-100">Generate Report</button>
         </form>
@@ -106,3 +76,48 @@
     </div>
   </div>
 </div>
+<script>
+
+document.addEventListener("change", function(e){
+
+if(e.target && e.target.id === "academic_year_id"){
+
+let year = e.target.value;
+
+fetch("../controllers/get-academic-data.php?academic_year_id="+year)
+.then(res => res.json())
+.then(data => {
+
+let classSelect = document.getElementById("class_id");
+let termSelect = document.getElementById("term");
+let examSelect = document.getElementById("exam_id");
+
+classSelect.disabled = false;
+termSelect.disabled = false;
+examSelect.disabled = false;
+
+classSelect.innerHTML = "<option value=''>Select Class</option>";
+termSelect.innerHTML = "<option value=''>Select Term</option>";
+examSelect.innerHTML = "<option value=''>Select Exam</option>";
+
+data.classes.forEach(c=>{
+classSelect.innerHTML += `<option value="${c.class_id}">${c.name}</option>`;
+});
+
+data.terms.forEach(t=>{
+termSelect.innerHTML += `<option value="${t.term}">${t.term}</option>`;
+});
+
+data.exams.forEach(e=>{
+examSelect.innerHTML += `<option value="${e.id}">${e.exam_name}</option>`;
+});
+
+});
+
+}
+
+});
+
+</script>
+
+

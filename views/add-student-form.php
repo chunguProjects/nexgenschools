@@ -60,7 +60,7 @@ $existingStudents = $studentModel->getStudentsByClass($classId);
                                     </select>
                                 </td>
                                 <td><input type="date" name="date_of_birth[]" class="form-control" value="<?= htmlspecialchars($student['date_of_birth']) ?>"></td>
-                                <td><input type="text" name="contact_number[]" class="form-control" required value="<?= htmlspecialchars($student['contact_number']) ?>"></td>
+                                <td><input type="text" name="contact_number[]" class="form-control" value="<?= htmlspecialchars($student['contact_number']) ?>"></td>
                                 <td>
                                     <input type="checkbox" name="delete_student[]" value="<?= $student['student_id'] ?>">
                                 </td>
@@ -83,7 +83,7 @@ $existingStudents = $studentModel->getStudentsByClass($classId);
                                 </select>
                             </td>
                             <td><input type="date" name="date_of_birth[]" class="form-control"></td>
-                            <td><input type="text" name="contact_number[]" class="form-control" required></td>
+                            <td><input type="text" name="contact_number[]" class="form-control"></td>
                             <td></td>
                             <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
                         </tr>

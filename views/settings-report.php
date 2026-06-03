@@ -65,7 +65,7 @@ $settings = $model->getSettings(); // single-tenant, no schoolId
 <body>
     <div class="settings-container">
         <div class="d-flex justify-content-between align-items-center mb-4" style="display: flex; justify-content: space-between; align-items: center;">
-            <a href="schooladmin.php?page=dashboard" class="btn btn-outline-secondary" style="text-decoration: none; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px;">
+            <a href="admin.php?page=dashboard" class="btn btn-outline-secondary" style="text-decoration: none; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px;">
                 <i class="fa fa-arrow-left"></i> Back
             </a>
             <h2 style="flex: 1; text-align: center; margin: 0;">Report Settings</h2>

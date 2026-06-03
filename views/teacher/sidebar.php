@@ -54,7 +54,6 @@ function navItem($page, $label, $icon, $currentPage) {
 
       <?php navItem('dashboard', 'Dashboard', 'fa-solid fa-house', $currentPage); ?>
       <?php navItem('classes', 'My Classes', 'fa-solid fa-users', $currentPage); ?>
-      <?php navItem('enter-grades', 'Enter Grades', 'fa-solid fa-pen-nib', $currentPage); ?>
       <?php navItem('settings', 'Settings', 'fa-solid fa-gear', $currentPage); ?>
 
     </ul>

@@ -48,12 +48,20 @@ class User {
     /**
      * Delete user
      */
-    public function deleteUser($userId) {
-        $query = "DELETE FROM users WHERE user_id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $userId);
-        return $stmt->execute();
-    }
+   public function deleteUser($userId) {
+    // 1. Remove teacher assignments
+    $query1 = "DELETE FROM class_subject_teacher WHERE teacher_id = ?";
+    $stmt1 = $this->conn->prepare($query1);
+    $stmt1->bind_param("i", $userId);
+    $stmt1->execute();
+
+    // 2. Now delete user
+    $query2 = "DELETE FROM users WHERE user_id = ?";
+    $stmt2 = $this->conn->prepare($query2);
+    $stmt2->bind_param("i", $userId);
+
+    return $stmt2->execute();
+}
 
     /**
      * Get single user

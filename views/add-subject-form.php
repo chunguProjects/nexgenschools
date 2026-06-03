@@ -13,7 +13,6 @@ $subjectId = $_GET['subject_id'] ?? null;
 $subjectData = [
     'subject_name' => '',
     'subject_code' => '',
-    'teacher_id'   => '',
 ];
 
 $isEdit = false;
@@ -30,7 +29,6 @@ if ($subjectId) {
     $subjectData = [
         'subject_name' => $subject['subject_name'],
         'subject_code' => $subject['subject_code'],
-        'teacher_id'   => $subject['teacher_id'],
     ];
 }
 
@@ -71,25 +69,6 @@ $error = $_GET['error'] ?? null;
                 <label for="subject_code" class="form-label">Subject Code</label>
                 <input type="text" class="form-control" id="subject_code" name="subject_code"
                        value="<?= htmlspecialchars($subjectData['subject_code']) ?>">
-            </div>
-        </div>
-
-        <!-- Subject Teacher -->
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label for="teacher_id" class="form-label">Subject Teacher</label>
-                <select class="form-select" id="teacher_id" name="teacher_id" required>
-                    <option value="" disabled <?= !$subjectData['teacher_id'] ? 'selected' : '' ?>>Select Teacher</option>
-                    <?php
-                    $query = "SELECT user_id, full_name FROM users WHERE role_id = 2";
-                    $result = $conn->query($query);
-
-                    while ($teacher = $result->fetch_assoc()):
-                        $selected = $teacher['user_id'] == $subjectData['teacher_id'] ? 'selected' : '';
-                        echo "<option value='{$teacher['user_id']}' $selected>{$teacher['full_name']}</option>";
-                    endwhile;
-                    ?>
-                </select>
             </div>
         </div>
 

@@ -1,35 +1,52 @@
 <?php
 include('../config/db.php');
 include('../model/student.php');
-include('../model/subject.php');
-include('../model/grades.php');
+include('../model/ClassSubject.php');
+include('../model/Grades.php');
+include('../model/Exam.php');
 
 session_start();
 
 // Get and validate parameters
-$class_id = $_GET['class_id'] ?? null;
-$exam_id = $_GET['exam_id'] ?? null;
+$class_id = intval($_GET['class_id'] ?? 0);
+$exam_id = intval($_GET['exam_id'] ?? 0);
 
 if (!$class_id || !$exam_id ) {
     echo "<div class='alert alert-danger'>Missing required parameters.</div>";
     exit;
 }
 
-// Load students and subjects
-$studentModel = new Student($conn);
-$students = $studentModel->getStudentsByClass($class_id);
+// Load exam to get academic year
+$examModel = new Exams($conn);
+$exam = $examModel->getExamById($exam_id);
 
-$subjectModel = new Subjects($conn);
-$subjects = $subjectModel->getAllSubjects();
+if (!$exam) {
+    echo "<div class='alert alert-danger'>Exam not found.</div>";
+    exit;
+}
+$academic_year_id = $exam['academic_year_id'];
+
+// Load only assigned subjects for this class & academic year
+$classSubjModel = new ClassSubject($conn);
+$subjects = $classSubjModel->getByClass($class_id, $academic_year_id);
+
+if (empty($subjects)) {
+    echo "<div class='alert alert-warning'>No subjects assigned to this class.</div>";
+    exit;
+}
+
+// Load students in this class & academic year
+$studentModel = new Student($conn);
+$students = $studentModel->getStudentsByClass($class_id, $academic_year_id);
+
+if (empty($students)) {
+    echo "<div class='alert alert-warning'>No students found in this class.</div>";
+    exit;
+}
 
 // Load existing grades
 $gradesModel = new Grades($conn);
-$existingGrades = $gradesModel->getGradesMap( $exam_id, $class_id); // returns [student_id][subject_id] => marks
-
-if (empty($students) || empty($subjects)) {
-    echo "<div class='alert alert-warning'>No students or subjects found for this class.</div>";
-    exit;
-}
+$existingGrades = $gradesModel->getGradesMap($exam_id, $class_id); // [student_id][subject_id] => marks
 ?>
 
 <div class="table-responsive">
@@ -49,7 +66,7 @@ if (empty($students) || empty($subjects)) {
                         <?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?>
                         <input type="hidden" name="student_ids[]" value="<?= $student['student_id'] ?>">
                     </td>
-                    <?php foreach ($subjects as $subject): 
+                    <?php foreach ($subjects as $subject):
                         $currentGrade = $existingGrades[$student['student_id']][$subject['subject_id']] ?? '';
                     ?>
                         <td>
@@ -59,8 +76,6 @@ if (empty($students) || empty($subjects)) {
                                 class="form-control form-control-sm grade-input"
                                 min="0" max="100"
                                 value="<?= htmlspecialchars($currentGrade) ?>"
-                                data-original-value="<?= htmlspecialchars($currentGrade) ?>"
-                                oninput="detectGradeChange()"
                                 placeholder="0"
                             >
                         </td>
@@ -75,30 +90,6 @@ if (empty($students) || empty($subjects)) {
 <input type="hidden" name="class_id" value="<?= htmlspecialchars($class_id) ?>">
 <input type="hidden" name="exam_id" value="<?= htmlspecialchars($exam_id) ?>">
 
-<!-- Save Button -->
-<button type="submit" id="save-grades-btn" class="btn btn-primary mt-3">Save Grades</button>
+<!-- Save Button (always enabled) -->
+<button type="submit" id="save-grades-btn" class="btn btn-success mt-3">Save Grades</button>
 
-<script>
-function detectGradeChange() {
-    const inputs = document.querySelectorAll('.grade-input');
-    const saveButton = document.getElementById('save-grades-btn');
-    let hasChanges = false;
-
-    inputs.forEach(input => {
-        const original = input.dataset.originalValue;
-        if (input.value !== original) {
-            hasChanges = true;
-        }
-    });
-
-    if (hasChanges) {
-        saveButton.disabled = false;
-        saveButton.classList.remove('btn-secondary');
-        saveButton.classList.add('btn-success');
-    } else {
-        saveButton.disabled = true;
-        saveButton.classList.remove('btn-success');
-        saveButton.classList.add('btn-secondary');
-    }
-}
-</script>

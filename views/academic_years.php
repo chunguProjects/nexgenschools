@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 $ayModel = new AcademicYear($conn);
-$result = $ayModel->getAll();
+$result  = $ayModel->getAll(); // This returns an ARRAY
 ?>
 
 <!DOCTYPE html>
@@ -16,37 +16,93 @@ $result = $ayModel->getAll();
     <title>Academic Years</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="container mt-4">
-    <h2>Academic Years</h2>
 
+<body class="container-fluid py-3">
+
+    <div class="d-flex align-items-center mb-3">
+
+        <!-- Left -->
+        <div style="width: 120px;">
+            <a href="admin.php?page=dashboard" class="btn btn-outline-secondary">
+                <i class="fa fa-arrow-left"></i> Back
+            </a>
+        </div>
+
+        <!-- Center -->
+        <div class="flex-grow-1 text-center">
+            <h4 class="mb-0">Academic Years</h4>
+        </div>
+
+        <!-- Right (balance space) -->
+        <div style="width: 120px;"></div>
+
+    </div>
+
+    <!-- Alerts -->
     <?php if (!empty($_SESSION['success'])): ?>
-        <div class="alert alert-success"><?= $_SESSION['success']; unset($_SESSION['success']); ?></div>
+        <div class="alert alert-success">
+            <?= $_SESSION['success']; unset($_SESSION['success']); ?>
+        </div>
     <?php elseif (!empty($_SESSION['error'])): ?>
-        <div class="alert alert-danger"><?= $_SESSION['error']; unset($_SESSION['error']); ?></div>
+        <div class="alert alert-danger">
+            <?= $_SESSION['error']; unset($_SESSION['error']); ?>
+        </div>
     <?php endif; ?>
 
-    <form id="academicYearForm" action="../controllers/academic_year_controller.php" method="post" class="mb-4">
+    <!-- Form -->
+    <form id="academicYearForm" 
+          action="../controllers/academic_year_controller.php" 
+          method="post" 
+          class="mb-4">
+
         <input type="hidden" name="academic_year_id" id="academic_year_id" value="">
+
         <div class="row g-2">
             <div class="col-md-2">
-                <input type="text" name="name" id="name" placeholder="2025-2026" class="form-control" required>
+                <input type="text" 
+                       name="name" 
+                       id="name" 
+                       placeholder="2025-2026" 
+                       class="form-control" 
+                       required>
             </div>
+
             <div class="col-md-3">
-                <input type="date" name="start_date" id="start_date" class="form-control" required>
+                <input type="date" 
+                       name="start_date" 
+                       id="start_date" 
+                       class="form-control" 
+                       required>
             </div>
+
             <div class="col-md-3">
-                <input type="date" name="end_date" id="end_date" class="form-control" required>
+                <input type="date" 
+                       name="end_date" 
+                       id="end_date" 
+                       class="form-control" 
+                       required>
             </div>
+
             <div class="col-md-2 d-flex align-items-center">
-                <input type="checkbox" name="is_current" id="is_current" value="1" class="form-check-input me-2">
+                <input type="checkbox" 
+                       name="is_current" 
+                       id="is_current" 
+                       value="1" 
+                       class="form-check-input me-2">
                 <label class="form-check-label">Current?</label>
             </div>
+
             <div class="col-md-2">
-                <button type="submit" id="formSubmitBtn" class="btn btn-primary w-100">Save</button>
+                <button type="submit" 
+                        id="formSubmitBtn" 
+                        class="btn btn-primary w-100">
+                    Save
+                </button>
             </div>
         </div>
     </form>
 
+    <!-- Table -->
     <table class="table table-bordered table-hover" id="academicYearTable">
         <thead class="table-light">
             <tr>
@@ -57,38 +113,47 @@ $result = $ayModel->getAll();
                 <th>Actions</th>
             </tr>
         </thead>
+
         <tbody>
-            <?php if ($result && $result->num_rows > 0): ?>
-                <?php while($row = $result->fetch_assoc()): ?>
+            <?php if (!empty($result)): ?>
+                <?php foreach ($result as $row): ?>
                     <tr>
                         <td class="year_name"><?= htmlspecialchars($row['name']) ?></td>
                         <td class="year_start"><?= htmlspecialchars($row['start_date']) ?></td>
                         <td class="year_end"><?= htmlspecialchars($row['end_date']) ?></td>
-                        <td class="year_current text-center"><?= $row['is_current'] ? '✅' : '' ?></td>
+                        <td class="year_current text-center">
+                            <?= $row['is_current'] ? '✅' : '' ?>
+                        </td>
                         <td>
-                            <button type="button" class="btn btn-warning btn-sm editBtn" 
-                                    data-id="<?= $row['academic_year_id'] ?>" 
-                                    data-name="<?= htmlspecialchars($row['name']) ?>" 
-                                    data-start="<?= $row['start_date'] ?>" 
-                                    data-end="<?= $row['end_date'] ?>" 
+                            <button type="button" 
+                                    class="btn btn-warning btn-sm editBtn"
+                                    data-id="<?= $row['academic_year_id'] ?>"
+                                    data-name="<?= htmlspecialchars($row['name']) ?>"
+                                    data-start="<?= $row['start_date'] ?>"
+                                    data-end="<?= $row['end_date'] ?>"
                                     data-current="<?= $row['is_current'] ?>">
                                 Edit
                             </button>
-                            <a href="../controllers/academic_year_controller.php?delete=<?= $row['academic_year_id'] ?>" 
-                               class="btn btn-danger btn-sm" 
+
+                            <!-- <a href="../controllers/academic_year_controller.php?delete=<?= $row['academic_year_id'] ?>"
+                               class="btn btn-danger btn-sm"
                                onclick="return confirm('Are you sure you want to delete this academic year?')">
                                Delete
-                            </a>
+                            </a> -->
                         </td>
                     </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             <?php else: ?>
-                <tr><td colspan="5" class="text-center text-muted">No academic years found.</td></tr>
+                <tr>
+                    <td colspan="5" class="text-center text-muted">
+                        No academic years found.
+                    </td>
+                </tr>
             <?php endif; ?>
         </tbody>
     </table>
 
-   <script>
+<script>
     // Handle Edit button clicks
     const editButtons = document.querySelectorAll('.editBtn');
     const formId = document.getElementById('academic_year_id');
@@ -111,7 +176,7 @@ $result = $ayModel->getAll();
         });
     });
 
-    // Reset form after successful submission
+    // Reset form after submission
     form.addEventListener('submit', () => {
         setTimeout(() => {
             formId.value = '';
@@ -120,7 +185,7 @@ $result = $ayModel->getAll();
             endInput.value = '';
             currentInput.checked = false;
             submitBtn.textContent = 'Save';
-        }, 100); // small delay to allow form submission to go through
+        }, 100);
     });
 
     // Auto-hide alerts after 3 seconds
@@ -128,11 +193,10 @@ $result = $ayModel->getAll();
         const alerts = document.querySelectorAll('.alert');
         alerts.forEach(alert => {
             setTimeout(() => {
-                // Fade out effect
                 alert.style.transition = "opacity 0.5s ease";
                 alert.style.opacity = '0';
-                setTimeout(() => alert.remove(), 500); // Remove from DOM after fade
-            }, 3000); // 3 seconds delay
+                setTimeout(() => alert.remove(), 500);
+            }, 3000);
         });
     });
 </script>
