@@ -13,7 +13,7 @@
       <div class="modal-body">
         <form id="generateReportForm" method="POST" action="../controllers/report-controller.php" target="_blank">
           <?php
-          include('../config/db.php');
+          include(__DIR__ . '/../config/db.php');
           if (session_status() === PHP_SESSION_NONE) session_start();
           ?>
 

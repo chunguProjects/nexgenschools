@@ -2,8 +2,12 @@
 include('config/db.php');
 require_once('model/GeneralSettingsModel.php');
 
-$model = new GeneralSettingsModel($conn);
-$settings = $model->getSettings();
+$settings = [];
+
+if ($conn) {
+    $model = new GeneralSettingsModel($conn);
+    $settings = $model->getSettings();
+}
 
 $schoolName = $settings['school_name'] ?? 'NextGen Schools';
 $logoPath   = $settings['logo_path'] ?? null;
@@ -21,6 +25,11 @@ if ($logoPath && file_exists(__DIR__ . '/' . $logoPath)) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="description" content="School Management System for managing students, teachers, examinations and reports.">
+
+<meta name="keywords" content="School Management System, Student Portal, Results, Education, Malawi">
+
+<meta name="author" content="Steven Chungu">
   <meta charset="UTF-8">
   <title><?= htmlspecialchars($schoolName) ?></title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

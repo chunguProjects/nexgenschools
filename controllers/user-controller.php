@@ -1,6 +1,6 @@
 <?php
 include_once('../config/db.php');
-include_once('../model/User.php');
+include_once('../model/user.php');
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

@@ -1,9 +1,10 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-include('../config/db.php');
-include('../model/student.php');
-include('../model/class.php');
+include(__DIR__ . '/../config/db.php');
+include(__DIR__ . '/../model/student.php');
+include(__DIR__ . '/../model/class.php');
+
 
 $classId = $_GET['class_id'] ?? null;
 

@@ -1,9 +1,9 @@
 <?php
 include('../config/db.php');
-include('../model/ClassSubject.php');
-include('../model/User.php');
-include('../model/ClassSubjectTeacher.php');
-include('../model/Academic_year.php');
+include('../model/classSubject.php');
+include('../model/user.php');
+include('../model/classSubjectTeacher.php');
+include('../model/academic_year.php');
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 

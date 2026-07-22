@@ -79,11 +79,31 @@ function navItem($page, $label, $icon, $currentPage) {
           <span>Grading</span>
           <i class="fa-solid fa-chevron-down ms-auto small"></i>
         </a>
-        <div class="collapse ps-3 <?= in_array($currentPage ?? '', ['report', 'grading']) ? 'show' : '' ?>" id="gradingMenu">
-          <a href="admin.php?page=grading" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'grading' ? 'text-primary fw-semibold' : 'text-dark'; ?>">🏷️ Grading Criteria</a>
-          <a href="#" class="d-block py-1 px-3 text-decoration-none text-dark" data-bs-toggle="modal" data-bs-target="#generateReportModal">📊 Class Reports</a>
-          <a href="" class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'report' ? 'text-primary fw-semibold' : 'text-dark'; ?>">👥 Student Reports</a>
-        </div>
+        <div class="collapse ps-3 <?= in_array($currentPage ?? '', ['grading', 'summary', 'report']) ? 'show' : '' ?>" id="gradingMenu">
+
+    <a href="admin.php?page=grading"
+       class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'grading' ? 'text-primary fw-semibold' : 'text-dark'; ?>">
+        🏷️ Grading Criteria
+    </a>
+
+    <a href="#"
+       class="d-block py-1 px-3 text-decoration-none text-dark"
+       data-bs-toggle="modal"
+       data-bs-target="#generateReportModal">
+        📊 Class Reports
+    </a>
+
+    <a href="admin.php?page=summary"
+       class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'summary' ? 'text-primary fw-semibold' : 'text-dark'; ?>">
+        📈 Results Summary
+    </a>
+
+    <a href="admin.php?page=report"
+       class="d-block py-1 px-3 text-decoration-none <?= ($currentPage ?? '') === 'report' ? 'text-primary fw-semibold' : 'text-dark'; ?>">
+        👤 Student Reports
+    </a>
+
+</div>
       </li>
 
       <!-- Communication Dropdown -->

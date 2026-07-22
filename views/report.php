@@ -1,4 +1,13 @@
 <?php
+
+/**
+ * @var array $student
+ * @var array $subjects
+ * @var array $grades
+ * @var string $term
+ * @var array $gradingCriteria
+ */
+
 $totalMarks = 0;
 $subjectCount = 1;
 

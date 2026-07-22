@@ -30,7 +30,7 @@ $teacherName = $_SESSION['user']['full_name'] ?? 'Teacher';
                 <li><a class="dropdown-item" href="#">👤 Profile</a></li>
                 <li><a class="dropdown-item" href="teacher.php?page=settings">⚙️ Settings</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="/nexgenschools/controllers/logout.php">🚪 Logout</a></li>
+                <li><a class="dropdown-item text-danger" href="../controllers/logout.php">🚪 Logout</a></li>
             </ul>
         </li>
     </ul>

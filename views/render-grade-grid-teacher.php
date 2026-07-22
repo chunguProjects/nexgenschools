@@ -1,9 +1,9 @@
 <?php
 include('../config/db.php');
 include('../model/student.php');
-include('../model/ClassSubject.php');
-include('../model/Grades.php');
-include('../model/Exam.php');
+include('../model/classSubject.php');
+include('../model/grades.php');
+include('../model/exam.php');
 include('../model/class.php');
 
 session_start();

@@ -72,6 +72,16 @@ class StudentReportService {
         $student['settings']      = $settings;
         $student['level']         = $this->determineLevelFromClassName($className);
         $student['exam_name']     = $examName;
+    
+        /**
+     * Variables passed to report.php
+     *
+     * @var array $student
+     * @var array $subjects
+     * @var array $grades
+     * @var string $term
+     * @var array $gradingCriteria
+     */
 
         ob_start();
         include('../views/report.php');

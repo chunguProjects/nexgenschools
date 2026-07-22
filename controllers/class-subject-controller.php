@@ -1,7 +1,7 @@
 <?php
 session_start();
 include('../config/db.php');
-include('../model/ClassSubject.php');
+include('../model/classSubject.php');
 
 $classSubjectModel = new ClassSubject($conn);
 

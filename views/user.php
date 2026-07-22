@@ -1,6 +1,6 @@
 <?php
-include('../config/db.php');
-include('../model/User.php');
+include(__DIR__ . '/../config/db.php');
+include(__DIR__ . '/../model/user.php');
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 

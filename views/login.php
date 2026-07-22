@@ -15,6 +15,10 @@ if (isset($_SESSION['user'])) {
         case 3: header("Location: ../dashboard/teacher.php"); exit;
     }
 }
+$flashMessage = $_SESSION['flash_message'] ?? null;
+$flashType = $_SESSION['flash_type'] ?? null;
+
+unset($_SESSION['flash_message'], $_SESSION['flash_type']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -22,9 +26,10 @@ if (isset($_SESSION['user'])) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login</title>
- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+ <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
 
 </head>
+
 <body class="bg-light">
   <div class="container">
     <div class="row justify-content-center align-items-center min-vh-100">
@@ -34,6 +39,13 @@ if (isset($_SESSION['user'])) {
             <h1 class="h4">Login</h1>
             <p class="text-muted mb-0">Login to your account</p>
           </div>
+           <!-- ✅ FLASH MESSAGE INSIDE FORM -->
+  <?php if ($flashMessage): ?>
+      <div class="alert alert-<?= $flashType === 'success' ? 'success' : 'danger' ?> alert-dismissible fade show">
+          <?= htmlspecialchars($flashMessage) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+  <?php endif; ?>
           <form action="../controllers/login.php" method="post">
             <div class="mb-3">
               <label for="username" class="form-label">Username</label>
@@ -74,7 +86,15 @@ if (isset($_SESSION['user'])) {
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+setTimeout(() => {
+    let alert = document.querySelector('.alert');
+    if (alert) {
+        alert.classList.remove('show');
+        alert.classList.add('hide');
+    }
+}, 4000);
+</script>
 </body>
 </html>

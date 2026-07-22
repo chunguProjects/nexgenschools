@@ -30,15 +30,19 @@ foreach ($exams as $exam) {
 
 <div class="container-fluid py-3">
 
-<?php
-// Flash messages
-if (isset($_SESSION['flash_message'])) {
-    $msg = $_SESSION['flash_message'];
-    $alertType = $msg['type'] === 'error' ? 'danger' : $msg['type'];
-    echo "<div class='alert alert-{$alertType}'>{$msg['text']}</div>";
-    unset($_SESSION['flash_message']);
-}
-?>
+<?php if (isset($_SESSION['success'])): ?>
+    <div class="alert alert-success">
+        <?= htmlspecialchars($_SESSION['success']) ?>
+    </div>
+    <?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['error'])): ?>
+    <div class="alert alert-danger">
+        <?= htmlspecialchars($_SESSION['error']) ?>
+    </div>
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
 
 <!-- Header + Add -->
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -51,7 +55,7 @@ if (isset($_SESSION['flash_message'])) {
 </div>
 
 <?php if (!empty($examsByYear)): ?>
-    <?php foreach ($examsByYear as $yearId => $yearExams): 
+    <?php foreach ($examsByYear as $yearId => $yearExams):
         $isActiveYear = ($yearId === $currentYearId);
         $yearName = htmlspecialchars($yearExams[0]['academic_year_name'] ?? 'N/A');
     ?>
@@ -74,7 +78,9 @@ if (isset($_SESSION['flash_message'])) {
                                 <th>Actions</th>
                             </tr>
                         </thead>
+
                         <tbody>
+                        <?php if (!empty($yearExams)): ?>
                             <?php foreach ($yearExams as $exam): ?>
                                 <tr>
                                     <td><?= (int)$exam['id'] ?></td>
@@ -88,21 +94,50 @@ if (isset($_SESSION['flash_message'])) {
                                                 data-id="<?= (int)$exam['id'] ?>">Delete</button>
 
                                         <a href="admin.php?page=add-grades-form&exam_id=<?= (int)$exam['id'] ?>" 
-                                           class="btn btn-sm btn-success <?= $isActiveYear ? '' : 'disabled' ?>" 
+                                           class="btn btn-sm btn-success <?= $isActiveYear ? '' : 'disabled' ?>"
                                            <?= $isActiveYear ? '' : 'title="Cannot enter grades for non-active academic year"' ?>>
                                            Add Grades
                                         </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    No exams found for this academic year.
+                                </td>
+                            </tr>
+                        <?php endif; ?>
                         </tbody>
+
                     </table>
                 </div>
             </div>
         </div>
     <?php endforeach; ?>
+
 <?php else: ?>
-    <p class="text-center text-muted">No exams found.</p>
+    <div class="card shadow-sm">
+        <div class="card-body table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Exam Name</th>
+                        <th>Term</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            No exams found.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 <?php endif; ?>
 
 <!-- Delete Exam Script -->
@@ -121,8 +156,6 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(response => {
                 if (response.redirected) {
                     window.location.href = response.url;
-                } else {
-                    return response.text();
                 }
             })
             .catch(error => {
