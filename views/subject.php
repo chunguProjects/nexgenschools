@@ -21,70 +21,162 @@ $error   = $_GET['error'] ?? null;
 ?>
 
 <div class="container-fluid py-3">
-    <!-- Page Heading and Add Button -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="admin.php?page=dashboard" class="btn btn-outline-secondary">
-            <i class="fa fa-arrow-left"></i> Back
+
+    <!-- Page Header -->
+    <div class="lg-page-header">
+
+        <a href="admin.php?page=dashboard" class="lg-btn-back">
+            <i class="fa fa-arrow-left"></i>
+            Back
         </a>
-        <a href="admin.php?page=add-subject-form" class="btn btn-primary">
-            <i class="fa-solid fa-plus"></i> Add Subject
+
+
+        <a href="admin.php?page=add-subject-form" class="lg-btn-add">
+            <i class="fa-solid fa-plus"></i>
+            Add Subject
         </a>
+
     </div>
+
+
 
     <!-- Feedback Messages -->
     <?php if ($message): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
+
+        <div class="alert alert-success">
+            <?= htmlspecialchars($message) ?>
+        </div>
+
     <?php elseif ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+
+        <div class="alert alert-danger">
+            <?= htmlspecialchars($error) ?>
+        </div>
+
     <?php endif; ?>
 
+
+
+
     <!-- Subject List -->
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h5 class="card-title mb-0">Subject List</h5>
+
+    <div class="card">
+
+        <div class="lg-card-header">
+
+            <h5 class="card-title mb-0">
+                Subject List
+            </h5>
+
         </div>
+
+
         <div class="card-body">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="table-light">
+
+
+            <table class="table table-hover lg-table">
+
+                <thead>
+
                     <tr>
+
                         <th>ID</th>
+
                         <th>Subject Name</th>
+
                         <th>Code</th>
-                        <th style="width: 150px;">Actions</th>
+
+                        <th width="150">
+                            Actions
+                        </th>
+
                     </tr>
+
                 </thead>
+
+
                 <tbody>
-                    <?php if (!empty($subjects)): ?>
-                        <?php foreach ($subjects as $subject): ?>
-                            <tr>
-                                <td><?= $subject['subject_id'] ?></td>
-                                <td><?= htmlspecialchars($subject['subject_name']) ?></td>
-                                <td><?= htmlspecialchars($subject['subject_code'] ?? '-') ?></td>
-                <td>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-primary editSubjectBtn"
-                                data-id="<?= $subject['subject_id'] ?>">
-                            <i class="fa fa-edit"></i>
-                        </button>
 
-                        <button class="btn btn-sm btn-danger deleteSubjectBtn"
-                                data-id="<?= $subject['subject_id'] ?>">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
+                <?php if (!empty($subjects)): ?>
 
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">No Subjects Found</td>
-                        </tr>
-                    <?php endif; ?>
+                    <?php foreach ($subjects as $subject): ?>
+
+                    <tr>
+
+                        <td>
+                            <?= $subject['subject_id'] ?>
+                        </td>
+
+
+                        <td>
+                            <?= htmlspecialchars($subject['subject_name']) ?>
+                        </td>
+
+
+                        <td>
+                            <?= htmlspecialchars($subject['subject_code'] ?? '-') ?>
+                        </td>
+
+
+                        <td>
+
+                            <div class="d-flex gap-2">
+
+                                <button 
+                                    class="btn btn-sm lg-btn-edit editSubjectBtn"
+                                    data-id="<?= $subject['subject_id'] ?>">
+
+                                    <i class="fa fa-edit"></i>
+
+                                </button>
+
+
+
+                                <button 
+                                    class="btn btn-sm lg-btn-delete deleteSubjectBtn"
+                                    data-id="<?= $subject['subject_id'] ?>">
+
+                                    <i class="fa fa-trash"></i>
+
+                                </button>
+
+
+                            </div>
+
+                        </td>
+
+
+                    </tr>
+
+
+                    <?php endforeach; ?>
+
+
+                <?php else: ?>
+
+                    <tr>
+
+                        <td colspan="4" class="text-center text-muted">
+
+                            No Subjects Found
+
+                        </td>
+
+                    </tr>
+
+                <?php endif; ?>
+
+
                 </tbody>
+
+
             </table>
+
+
         </div>
+
     </div>
+
 </div>
 
 <!-- Hidden Delete Form -->

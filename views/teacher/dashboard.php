@@ -37,6 +37,29 @@ $totalStudents = $conn->query("
 ")->fetch_assoc()['total'] ?? 0;
 ?>
 
+<style>
+  .dash-stat h6{
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted, #6B6459);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .dash-stat h2{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    color: var(--ink, #1B2A3A);
+    margin: 0;
+  }
+  .hover-card {
+      transition: 0.2s ease-in-out;
+  }
+  .hover-card:hover {
+      transform: translateY(-5px);
+  }
+</style>
+
 <!-- ================= DASHBOARD UI ================= -->
 <div class="container py-4">
 
@@ -52,22 +75,22 @@ $totalStudents = $conn->query("
     <div class="row mt-4">
 
         <div class="col-md-4">
-            <div class="card shadow-sm text-center p-4">
-                <h6 class="text-muted">My Classes</h6>
+            <div class="card shadow-sm dash-stat text-center p-4">
+                <h6>My Classes</h6>
                 <h2><?= $totalClasses ?></h2>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm text-center p-4">
-                <h6 class="text-muted">Subjects</h6>
+            <div class="card shadow-sm dash-stat text-center p-4">
+                <h6>Subjects</h6>
                 <h2><?= $totalSubjects ?></h2>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm text-center p-4">
-                <h6 class="text-muted">Students</h6>
+            <div class="card shadow-sm dash-stat text-center p-4">
+                <h6>Students</h6>
                 <h2><?= $totalStudents ?></h2>
             </div>
         </div>
@@ -102,13 +125,3 @@ $totalStudents = $conn->query("
     </div> -->
 
 </div>
-
-<!-- ================= STYLES ================= -->
-<style>
-.hover-card {
-    transition: 0.2s ease-in-out;
-}
-.hover-card:hover {
-    transform: translateY(-5px);
-}
-</style>

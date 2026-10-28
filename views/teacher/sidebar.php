@@ -11,15 +11,15 @@ $schoolName = $settings['school_name'] ?? 'NextGen Schools';
 $logoPath   = $settings['logo_path'] ?? null;
 
 // Resolve absolute filesystem path for file_exists()
-$logoFullPath = $logoPath ? $_SERVER['DOCUMENT_ROOT'] . '/nexgenschools/' . ltrim($logoPath, '/') : null;
+$logoFullPath = $logoPath ? $_SERVER['DOCUMENT_ROOT'] . BASE_URL . '/' . ltrim($logoPath, '/') : null;
 // Resolve URL for the browser
-$logoUrl = $logoPath ? '/nexgenschools/' . ltrim($logoPath, '/') : null;
+$logoUrl = $logoPath ? BASE_URL . '/' . ltrim($logoPath, '/') : null;
 
 $currentPage = $_GET['page'] ?? 'dashboard';
 
 // Helper to render a nav item
 function navItem($page, $label, $icon, $currentPage) {
-    $active = $currentPage === $page ? 'bg-primary text-white fw-semibold' : 'text-dark';
+    $active = $currentPage === $page ? 'lg-nav-active' : 'lg-nav-link';
     echo "
         <li>
             <a href=\"teacher.php?page=$page\" class=\"d-flex align-items-center px-3 py-2 text-decoration-none $active\">
@@ -31,14 +31,14 @@ function navItem($page, $label, $icon, $currentPage) {
 }
 ?>
 
-<aside id="sidebar" class="js-sidebar bg-white border-end shadow-sm">
+<aside id="sidebar" class="js-sidebar">
   <div class="d-flex flex-column h-100">
 
     <!-- School Header -->
     <div class="sidebar-header d-flex justify-content-between align-items-center px-3 py-3 border-bottom">
-      <a href="teacher.php?page=dashboard" class="text-decoration-none text-primary fs-5 fw-semibold d-flex align-items-center">
+      <a href="teacher.php?page=dashboard" class="text-decoration-none fs-5 fw-semibold d-flex align-items-center">
         <?php if ($logoPath && file_exists($logoFullPath)): ?>
-          <img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo" style="max-height: 40px; max-width: 40px; object-fit: contain; margin-right: 8px;">
+          <img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo" class="school-logo">
         <?php else: ?>
           <i class="fa-solid fa-school me-2"></i>
         <?php endif; ?>
@@ -54,9 +54,10 @@ function navItem($page, $label, $icon, $currentPage) {
 
       <?php navItem('dashboard', 'Dashboard', 'fa-solid fa-house', $currentPage); ?>
       <?php navItem('classes', 'My Classes', 'fa-solid fa-users', $currentPage); ?>
-      <?php navItem('settings', 'Settings', 'fa-solid fa-gear', $currentPage); ?>
 
     </ul>
   </div>
-  <div id="sidebar-overlay"></div>
 </aside>
+<!-- Overlay for mobile — must be a SIBLING of #sidebar, not nested inside it,
+     for the CSS rule `#sidebar.show + #sidebar-overlay` to match. -->
+<div id="sidebar-overlay"></div>

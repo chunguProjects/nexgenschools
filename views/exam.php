@@ -30,52 +30,61 @@ foreach ($exams as $exam) {
 
 <div class="container-fluid py-3">
 
-<?php if (isset($_SESSION['success'])): ?>
-    <div class="alert alert-success">
-        <?= htmlspecialchars($_SESSION['success']) ?>
+    <!-- Page Header -->
+    <div class="lg-page-header">
+
+        <a href="admin.php?page=dashboard" class="lg-btn-back">
+            <i class="fa fa-arrow-left"></i>
+            Back
+        </a>
+
+        <a href="admin.php?page=add-exam-form" class="lg-btn-add">
+            <i class="fa-solid fa-plus"></i>
+            Add Exam
+        </a>
+
     </div>
-    <?php unset($_SESSION['success']); ?>
-<?php endif; ?>
 
-<?php if (isset($_SESSION['error'])): ?>
-    <div class="alert alert-danger">
-        <?= htmlspecialchars($_SESSION['error']) ?>
-    </div>
-    <?php unset($_SESSION['error']); ?>
-<?php endif; ?>
+    <!-- Feedback Messages -->
+    <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success">
+            <?= htmlspecialchars($_SESSION['success']) ?>
+        </div>
+        <?php unset($_SESSION['success']); ?>
+    <?php endif; ?>
 
-<!-- Header + Add -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="admin.php?page=dashboard" class="btn btn-outline-secondary">
-        <i class="fa fa-arrow-left"></i> Back
-    </a>
-    <a href="admin.php?page=add-exam-form" class="btn btn-primary">
-        <i class="fa-solid fa-plus"></i> Add Exam
-    </a>
-</div>
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger">
+            <?= htmlspecialchars($_SESSION['error']) ?>
+        </div>
+        <?php unset($_SESSION['error']); ?>
+    <?php endif; ?>
 
-<?php if (!empty($examsByYear)): ?>
-    <?php foreach ($examsByYear as $yearId => $yearExams):
-        $isActiveYear = ($yearId === $currentYearId);
-        $yearName = htmlspecialchars($yearExams[0]['academic_year_name'] ?? 'N/A');
-    ?>
-        <div class="mb-4">
-            <h5 class="fw-bold mb-2">
-                Academic Year: <?= $yearName ?>
-                <?php if ($isActiveYear): ?>
-                    <span class="badge bg-success ms-2">Active</span>
-                <?php endif; ?>
-            </h5>
+    <!-- Exam Lists, grouped by academic year -->
+    <?php if (!empty($examsByYear)): ?>
+        <?php foreach ($examsByYear as $yearId => $yearExams):
+            $isActiveYear = ($yearId === $currentYearId);
+            $yearName = htmlspecialchars($yearExams[0]['academic_year_name'] ?? 'N/A');
+        ?>
+            <div class="card mb-4">
 
-            <div class="card shadow-sm">
-                <div class="card-body table-responsive">
-                    <table class="table table-bordered table-hover">
-                        <thead class="table-light">
+                <div class="lg-card-header d-flex align-items-center">
+                    <h5 class="card-title mb-0">
+                        Academic Year: <?= $yearName ?>
+                    </h5>
+                    <?php if ($isActiveYear): ?>
+                        <span class="badge ms-2" style="background:var(--gold); color:var(--ink);">Active</span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="card-body">
+                    <table class="table table-hover lg-table">
+                        <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Exam Name</th>
                                 <th>Term</th>
-                                <th>Actions</th>
+                                <th width="200">Actions</th>
                             </tr>
                         </thead>
 
@@ -87,17 +96,23 @@ foreach ($exams as $exam) {
                                     <td><?= htmlspecialchars($exam['exam_name']) ?></td>
                                     <td><?= htmlspecialchars($exam['term']) ?></td>
                                     <td>
-                                        <a href="admin.php?page=add-exam-form&exam_id=<?= (int)$exam['id'] ?>" 
-                                           class="btn btn-sm btn-primary me-1">Edit</a>
+                                        <div class="d-flex gap-2">
+                                            <a href="admin.php?page=add-exam-form&exam_id=<?= (int)$exam['id'] ?>"
+                                               class="btn btn-sm lg-btn-edit">
+                                                <i class="fa fa-edit"></i>
+                                            </a>
 
-                                        <button class="btn btn-sm btn-danger deleteExamBtn me-1" 
-                                                data-id="<?= (int)$exam['id'] ?>">Delete</button>
+                                            <button class="btn btn-sm lg-btn-delete deleteExamBtn"
+                                                    data-id="<?= (int)$exam['id'] ?>">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
 
-                                        <a href="admin.php?page=add-grades-form&exam_id=<?= (int)$exam['id'] ?>" 
-                                           class="btn btn-sm btn-success <?= $isActiveYear ? '' : 'disabled' ?>"
-                                           <?= $isActiveYear ? '' : 'title="Cannot enter grades for non-active academic year"' ?>>
-                                           Add Grades
-                                        </a>
+                                            <a href="admin.php?page=add-grades-form&exam_id=<?= (int)$exam['id'] ?>"
+                                               class="btn btn-sm btn-ledger-solid <?= $isActiveYear ? '' : 'disabled' ?>"
+                                               <?= $isActiveYear ? '' : 'title="Cannot enter grades for non-active academic year"' ?>>
+                                               Add Grades
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -109,36 +124,39 @@ foreach ($exams as $exam) {
                             </tr>
                         <?php endif; ?>
                         </tbody>
-
                     </table>
                 </div>
             </div>
-        </div>
-    <?php endforeach; ?>
+        <?php endforeach; ?>
 
-<?php else: ?>
-    <div class="card shadow-sm">
-        <div class="card-body table-responsive">
-            <table class="table table-bordered">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Exam Name</th>
-                        <th>Term</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">
-                            No exams found.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <?php else: ?>
+        <div class="card">
+            <div class="lg-card-header">
+                <h5 class="card-title mb-0">Exam List</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover lg-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Exam Name</th>
+                            <th>Term</th>
+                            <th width="200">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">
+                                No exams found.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-<?php endif; ?>
+    <?php endif; ?>
+
+</div>
 
 <!-- Delete Exam Script -->
 <script>

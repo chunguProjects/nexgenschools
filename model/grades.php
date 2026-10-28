@@ -30,6 +30,16 @@ class Grades
         return $stmt->execute();
     }
 
+    // Delete a grade record (used when a previously-saved cell is cleared back to blank)
+    public function deleteGrade($exam_id, $class_id, $subject_id, $student_id)
+    {
+        $query = "DELETE FROM grades 
+                  WHERE exam_id = ? AND class_id = ? AND subject_id = ? AND student_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("iiii", $exam_id, $class_id, $subject_id, $student_id);
+        return $stmt->execute();
+    }
+
     // Check if a grade already exists
     public function getGrade($exam_id, $class_id, $subject_id, $student_id)
     {

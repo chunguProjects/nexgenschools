@@ -23,11 +23,15 @@ CREATE TABLE users (
     phone_number VARCHAR(15),
     username VARCHAR(255) UNIQUE,
     email VARCHAR(255) UNIQUE,
+    profile_photo VARCHAR(255) NULL,
+    last_login DATETIME NULL,
     password VARCHAR(255) NOT NULL,
-    role_id INT,
+    role_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     password_updated BOOLEAN NOT NULL DEFAULT 0,
-    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE SET NULL
+    FOREIGN KEY (role_id) REFERENCES roles(role_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
 );
 
 CREATE TABLE classes (
@@ -108,19 +112,48 @@ CREATE TABLE settings (
     logo_path VARCHAR(255),
     address TEXT,
     contact_email VARCHAR(100),
-    contact_phone VARCHAR(20),
+    contact_phone VARCHAR(30),
     motto VARCHAR(255),
+
+    hero_heading VARCHAR(255) NULL,
+    hero_subtext TEXT NULL,
+    hero_image_path VARCHAR(255) NULL,
+    about_text TEXT NULL,
+    vision_text TEXT NULL,
+    about_image VARCHAR(255) NULL,
+
+    facebook_url VARCHAR(255) NULL,
+    instagram_url VARCHAR(255) NULL,
+    twitter_url VARCHAR(255) NULL,
+    linkedin_url VARCHAR(255) NULL,
+
     opening_date DATE,
+    founded_year YEAR NULL,
     closing_date DATE,
+
     head_teacher_name VARCHAR(255),
+
     fee_boarding INT,
     fee_self_boarding INT,
     fee_uniform INT,
     fee_registration INT,
     include_fees BOOLEAN DEFAULT TRUE,
+
     whatsapp_number VARCHAR(20),
     sms_sender_id VARCHAR(20),
+
+    mission_text TEXT NULL,
+    values_text TEXT NULL,
+    head_teacher_message TEXT NULL,
+    head_teacher_photo VARCHAR(255) NULL,
+
+    admissions_open TINYINT(1) NOT NULL DEFAULT 1,
+    admissions_text TEXT NULL,
+    map_query VARCHAR(255) NULL,
+    admissions_link VARCHAR(255) NULL,
+
     notification_email VARCHAR(100),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -173,7 +206,40 @@ VALUES (
     '999000000',
     'admin',
     'admin@nextgenschools.mw',
-    'admin123',
+    'admin@123',
     1,
     0
 );
+
+CREATE TABLE IF NOT EXISTS school_gallery (
+    gallery_id  INT AUTO_INCREMENT PRIMARY KEY,
+    image_path  VARCHAR(255) NOT NULL,
+    caption     VARCHAR(255) NULL,
+    sort_order  INT NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS announcements (
+    announcement_id INT AUTO_INCREMENT PRIMARY KEY,
+    title           VARCHAR(255) NOT NULL,
+    body            TEXT NOT NULL,
+    is_published    TINYINT(1) NOT NULL DEFAULT 1,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS why_choose_us (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    title       VARCHAR(150) NOT NULL,
+    body        TEXT NOT NULL,
+    image_path  VARCHAR(255) NULL,
+    sort_order  INT NOT NULL DEFAULT 0,
+    is_active   TINYINT(1) NOT NULL DEFAULT 1,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+INSERT INTO why_choose_us (title, body, sort_order, is_active) VALUES
+('Strong Academics', 'Excellent MSCE and JCE performance with committed teachers.', 1, 1),
+('Science Laboratories', 'Hands-on practical learning in Biology, Chemistry and Physics.', 2, 1),
+('ICT Education', 'Computer studies and digital skills for modern careers.', 3, 1),
+('Discipline & Safety', 'A safe, respectful and well-supervised learning environment.', 4, 1);
+

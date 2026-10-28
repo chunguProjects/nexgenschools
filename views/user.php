@@ -1,6 +1,6 @@
 <?php
-include(__DIR__ . '/../config/db.php');
-include(__DIR__ . '/../model/user.php');
+include_once(__DIR__ . '/../config/db.php');
+include_once(__DIR__ . '/../model/user.php');
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -11,17 +11,18 @@ $admins   = $userModel->getUsersByRoleId(1);   // schooladmin
 $teachers = $userModel->getUsersByRoleId(2);   // teacher
 ?>
 
+
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="admin.php?page=dashboard" class="btn btn-outline-secondary me-3">
+        <a href="admin.php?page=dashboard" class="btn btn-sm btn-ledger-outline me-3">
             <i class="fa fa-arrow-left"></i> Back
         </a>
-        <a href="admin.php?page=add-user-form" class="btn btn-primary">
+        <a href="admin.php?page=add-user-form" class="btn btn-sm btn-ledger-solid">
             <i class="fa-solid fa-plus"></i> Add User
         </a>
     </div>
 
-    <ul class="nav nav-tabs" id="userTab" role="tablist">
+    <ul class="nav nav-tabs ledger-tabs" id="userTab" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#admins" type="button" role="tab">
                 Admins
@@ -71,8 +72,8 @@ document.querySelectorAll('.deleteUserBtn').forEach(btn => {
 function renderUserTable($users) {
     if ($users && $users->num_rows > 0): ?>
         <div class="table-responsive shadow-sm rounded">
-            <table class="table table-bordered table-hover align-middle mb-0">
-                <thead class="table-light">
+            <table class="table table-bordered table-hover align-middle mb-0 ledger-table">
+                <thead>
                     <tr>
                         <th>ID</th>
                         <th>Full Name</th>
@@ -94,12 +95,12 @@ function renderUserTable($users) {
                             <td><span class="badge bg-info"><?= htmlspecialchars($user['role_name']) ?></span></td>
                             <td>
                                 <button 
-                                    class="btn btn-sm btn-primary"
+                                    class="btn btn-sm btn-ledger-outline"
                                     onclick="location.href='admin.php?page=add-user-form&user_id=<?= $user['user_id'] ?>'">
                                     <i class="fa fa-edit"></i> Edit
                                 </button>
                                 <button 
-                                    class="btn btn-sm btn-danger deleteUserBtn" 
+                                    class="btn btn-sm btn-ledger-danger deleteUserBtn" 
                                     data-id="<?= $user['user_id'] ?>">
                                     <i class="fa fa-trash"></i> Delete
                                 </button>

@@ -1,42 +1,29 @@
 <?php
-include('../config/db.php');
-
-// Get class ID
-$classId = (int)($_GET['class_id'] ?? 0);
-if (!$classId) {
-    echo json_encode([]);
-    exit;
-}
-
-// Fetch current academic year
-$currentYearResult = $conn->query("SELECT academic_year_id FROM academic_years WHERE is_current = 1 LIMIT 1");
-$currentYear = $currentYearResult->fetch_assoc();
-$currentYearId = $currentYear['academic_year_id'] ?? 0;
-
-if (!$currentYearId) {
-    echo json_encode([]);
-    exit;
-}
-
-// Get students from enrollments
-$stmt = $conn->prepare("
-    SELECT s.student_id, s.first_name, s.last_name, e.promoted
-    FROM student_enrollments e
-    JOIN students s ON s.student_id = e.student_id
-    WHERE e.class_id = ? AND e.academic_year_id = ? AND e.status = 'active'
-    ORDER BY s.first_name, s.last_name
-");
-$stmt->bind_param("ii", $classId, $currentYearId);
-$stmt->execute();
-$result = $stmt->get_result();
-
-$students = [];
-while ($row = $result->fetch_assoc()) {
-    $row['already_promoted'] = (bool)$row['promoted'];
-    $students[] = $row;
-}
-
-$stmt->close();
-
+if (session_status() === PHP_SESSION_NONE) session_start();
 header('Content-Type: application/json');
-echo json_encode($students);
+
+include_once(__DIR__ . '/../config/db.php');
+include_once(__DIR__ . '/../model/student.php');
+
+$classId = isset($_GET['class_id']) ? (int) $_GET['class_id'] : 0;
+
+if (!$classId) {
+    http_response_code(400);
+    echo json_encode(['students' => [], 'message' => 'Missing class_id.']);
+    exit;
+}
+
+$studentModel = new Student($conn);
+$students = $studentModel->getStudentsByClass($classId);
+
+// Keep only what the picker needs
+$slim = array_map(function ($s) {
+    return [
+        'student_id' => $s['student_id'],
+        'first_name' => $s['first_name'],
+        'last_name'  => $s['last_name'],
+    ];
+}, $students ?: []);
+
+echo json_encode(['students' => $slim]);
+exit;

@@ -1,6 +1,8 @@
 <?php
 include_once('../config/db.php');
 include_once('../model/user.php');
+require_once __DIR__ . '/../includes/session-check.php';
+
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

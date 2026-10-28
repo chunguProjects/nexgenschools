@@ -54,9 +54,3 @@ function updateYear(elementId) {
         el.textContent = `© ${year}`;
     }
 }
-
-const closeBtn = document.getElementById('sidebar-close');
-closeBtn.addEventListener('click', () => {
-    sidebar.classList.remove('active');
-    overlay.classList.remove('active');
-});

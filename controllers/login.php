@@ -78,6 +78,12 @@ if ($username && $password) {
         'role_id' => $user['role_id'],
         'role_name' => $user['role_name']
     ];
+    $_SESSION['last_activity'] = time(); // enables session-check.php's inactivity timeout
+
+    // Record this login's timestamp
+    $lastLoginStmt = $conn->prepare("UPDATE users SET last_login = NOW() WHERE user_id = ?");
+    $lastLoginStmt->bind_param("i", $user['user_id']);
+    $lastLoginStmt->execute();
 
     setFlash("success", "Welcome back, " . $user['full_name'] . "!");
 
@@ -172,6 +178,7 @@ if ($studentNumber && $dob) {
         'class_name' => $enrollment['class_name'],
         'academic_year_id' => $currentAcademicYearId
     ];
+    $_SESSION['last_activity'] = time(); // enables session-check.php's inactivity timeout
 
     setFlash("success", "Welcome " . $student['first_name'] . "!");
 

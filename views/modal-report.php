@@ -1,5 +1,3 @@
-
-
 <!-- Modal -->
 <div class="modal fade" id="generateReportModal" tabindex="-1" aria-labelledby="generateReportModalLabel" aria-hidden="true">
   <div class="modal-dialog" style="max-width:500px;">
@@ -13,7 +11,7 @@
       <div class="modal-body">
         <form id="generateReportForm" method="POST" action="../controllers/report-controller.php" target="_blank">
           <?php
-          include(__DIR__ . '/../config/db.php');
+          include_once(__DIR__ . '/../config/db.php');
           if (session_status() === PHP_SESSION_NONE) session_start();
           ?>
 
@@ -69,7 +67,7 @@
             </div>
 
 
-          <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+          <button type="submit" class="btn btn-ledger-solid w-100">Generate Report</button>
         </form>
       </div>
 
@@ -119,5 +117,3 @@ examSelect.innerHTML += `<option value="${e.id}">${e.exam_name}</option>`;
 });
 
 </script>
-
-

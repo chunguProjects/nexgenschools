@@ -4,6 +4,8 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role_name'] !== 'Student') {
     header("Location: ../views/student-portal.php");
     exit;
 }
+require_once __DIR__ . '/../includes/session-check.php';
+
 
 $currentPage = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
 ?>

@@ -18,13 +18,34 @@ class GeneralSettingsModel {
         return null;
     }
     // Get settings (single-tenant, always the first row)
-    public function getSettings() {
-        $query = "SELECT * FROM settings LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->fetch_assoc() ?: null;
+    public function getSettings()
+{
+    $result = $this->conn->query("SELECT * FROM settings LIMIT 1");
+
+    if ($result && $result->num_rows > 0) {
+        return $result->fetch_assoc();
     }
+
+    // No row exists - create a default one automatically
+    $stmt = $this->conn->prepare(
+        "INSERT INTO settings (school_name) VALUES (?)"
+    );
+
+    $defaultName = 'NextGen Schools';
+    $stmt->bind_param("s", $defaultName);
+    $stmt->execute();
+
+    // Return the newly created row
+    $id = $this->conn->insert_id;
+
+    $stmt = $this->conn->prepare(
+        "SELECT * FROM settings WHERE id = ? LIMIT 1"
+    );
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+
+    return $stmt->get_result()->fetch_assoc();
+}
 
     // Insert new settings (logo_path can be null)
     public function insertSettings($data) {

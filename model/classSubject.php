@@ -9,7 +9,7 @@ class ClassSubject {
     // Get subjects assigned to a class for a given academic year
     public function getByClass($classId, $academicYearId) {
         $stmt = $this->conn->prepare(
-            "SELECT cs.id as class_subject_id, s.subject_id, s.subject_name
+            "SELECT cs.id as class_subject_id, s.subject_id, s.subject_name, s.subject_code
              FROM class_subject cs
              JOIN subjects s ON cs.subject_id = s.subject_id
              WHERE cs.class_id = ? AND cs.academic_year_id = ?"

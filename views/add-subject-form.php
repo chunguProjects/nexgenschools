@@ -1,9 +1,9 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
+
 include('../config/db.php');
 include('../model/subject.php');
 
-// Ensure user is logged in
 if (!isset($_SESSION['user'])) {
     die("Unauthorized access.");
 }
@@ -18,7 +18,9 @@ $subjectData = [
 $isEdit = false;
 
 if ($subjectId) {
+
     $isEdit = true;
+
     $subjectModel = new Subjects($conn);
     $subject = $subjectModel->getSubjectById((int)$subjectId);
 
@@ -32,50 +34,171 @@ if ($subjectId) {
     ];
 }
 
-// Feedback messages
+
 $message = $_GET['message'] ?? null;
-$error = $_GET['error'] ?? null;
+$error   = $_GET['error'] ?? null;
+
 ?>
 
-<div class="container justify-content-center mt-5">
-    <h4 class="mb-4"><?= $isEdit ? "Edit Subject" : "Add New Subject" ?></h4>
 
+<div class="container-fluid py-3">
+
+
+    <!-- PAGE HEADER -->
+    <div class="lg-page-header">
+
+        <a href="admin.php?page=subject" 
+           class="lg-btn-back text-decoration-none">
+
+            <i class="fa fa-arrow-left"></i>
+            Back
+
+        </a>
+
+
+        <h4 class="lg-page-title mb-0">
+
+            <?= $isEdit ? "Edit Subject" : "Add New Subject" ?>
+
+        </h4>
+
+
+        <div></div>
+
+    </div>
+
+
+
+    <!-- ALERTS -->
     <?php if ($message): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
+
+        <div class="alert alert-success">
+            <?= htmlspecialchars($message) ?>
+        </div>
+
     <?php elseif ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+
+        <div class="alert alert-danger">
+            <?= htmlspecialchars($error) ?>
+        </div>
+
     <?php endif; ?>
 
-    <form action="../controllers/subject-controller.php" method="POST">
-        <?php if ($isEdit): ?>
-            <input type="hidden" name="update_subject" value="1">
-            <input type="hidden" name="subject_id" value="<?= htmlspecialchars($subjectId) ?>">
-        <?php else: ?>
-            <input type="hidden" name="add_subject" value="1">
-        <?php endif; ?>
 
-        <!-- Subject Name -->
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label for="subject_name" class="form-label">Subject Name</label>
-                <input type="text" class="form-control" id="subject_name" name="subject_name"
-                       value="<?= htmlspecialchars($subjectData['subject_name']) ?>" required>
+
+
+    <!-- FORM CARD -->
+    <div class="lg-form-card">
+
+
+        <h4>
+            <?= $isEdit ? "Update Subject Details" : "Subject Information" ?>
+        </h4>
+
+
+        <div class="lg-form-divider"></div>
+
+
+
+        <form action="../controllers/subject-controller.php" method="POST">
+
+
+            <?php if ($isEdit): ?>
+
+                <input type="hidden" name="update_subject" value="1">
+
+                <input type="hidden" 
+                       name="subject_id" 
+                       value="<?= htmlspecialchars($subjectId) ?>">
+
+
+
+            <?php else: ?>
+
+                <input type="hidden" name="add_subject" value="1">
+
+            <?php endif; ?>
+
+
+
+
+
+            <div class="row">
+
+
+                <div class="col-md-6 mb-3">
+
+
+                    <label for="subject_name">
+                        Subject Name
+                    </label>
+
+
+                    <input type="text"
+                           class="form-control"
+                           id="subject_name"
+                           name="subject_name"
+                           value="<?= htmlspecialchars($subjectData['subject_name']) ?>"
+                           required>
+
+
+                </div>
+
+
+
+                <div class="col-md-6 mb-3">
+
+
+                    <label for="subject_code">
+                        Subject Code
+                    </label>
+
+
+                    <input type="text"
+                           class="form-control"
+                           id="subject_code"
+                           name="subject_code"
+                           value="<?= htmlspecialchars($subjectData['subject_code']) ?>">
+
+
+                </div>
+
+
             </div>
-        </div>
 
-        <!-- Subject Code -->
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label for="subject_code" class="form-label">Subject Code</label>
-                <input type="text" class="form-control" id="subject_code" name="subject_code"
-                       value="<?= htmlspecialchars($subjectData['subject_code']) ?>">
+
+
+
+            <div class="d-flex gap-2 mt-3">
+
+
+                <button type="submit" 
+                        class="lg-btn-add">
+
+                    <i class="fa fa-save"></i>
+
+                    <?= $isEdit ? "Update Subject" : "Save Subject" ?>
+
+                </button>
+
+
+
+                <a href="admin.php?page=subject"
+                   class="lg-btn-back text-decoration-none">
+
+                    Cancel
+
+                </a>
+
+
             </div>
-        </div>
 
-        <!-- Buttons -->
-        <div class="d-flex justify-content-start">
-            <button type="submit" class="btn btn-primary me-2"><?= $isEdit ? "Update" : "Add" ?> Subject</button>
-            <a href="admin.php?page=subject" class="btn btn-secondary">Cancel</a>
-        </div>
-    </form>
+
+
+        </form>
+
+
+    </div>
+
+
 </div>

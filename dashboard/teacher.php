@@ -6,6 +6,7 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role_name'] !== 'teacher') {
 }
 include('../config/db.php');
 require_once('../model/GeneralSettingsModel.php');
+require_once __DIR__ . '/../includes/session-check.php';
 
 $model = new GeneralSettingsModel($conn);
 $settings = $model->getSettings();
@@ -14,12 +15,28 @@ $schoolName = $settings['school_name'] ?? 'School name';
 
 
 $currentPage = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
+
+$logoPath = $settings['logo_path'] ?? null;
+
+$logoUrl = null;
+
+if ($logoPath) {
+    // physical file path
+    $fullPath = dirname(__DIR__) . '/' . $logoPath;
+
+    if (file_exists($fullPath)) {
+        $logoUrl = '../' . $logoPath; // URL from admin folder to project root
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title><?=htmlspecialchars($schoolName)?></title>
+    <?php if (!empty($logoUrl)): ?>
+        <link rel="icon" type="image/png" href="<?= htmlspecialchars($logoUrl) ?>">
+    <?php endif; ?>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Styles -->
@@ -38,7 +55,7 @@ $currentPage = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
             <?php include('../views/teacher/header.php'); ?>
 
             <!-- Main Content -->
-            <main class="content flex-grow-1 px-3 py-4">
+            <main class="content flex-grow-1">                
                 <?php
                 $file = "../views/teacher/" . $currentPage . ".php";
                 if (file_exists($file)) {
@@ -50,7 +67,7 @@ $currentPage = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
             </main>
 
             <!-- Footer -->
-            <?php include('../views/teacher/footer.php'); ?>
+            <?php include('../views/footer.php'); ?>
         </div>
     </div>
 

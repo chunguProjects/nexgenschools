@@ -22,18 +22,20 @@ $existingStudents = $studentModel->getStudentsByClass($classId);
 ?>
 
 <div class="container mt-5">
-    <div class="d-flex align-items-center mb-4">
-        <a href="admin.php?page=class" class="btn btn-outline-secondary me-3">
-            <i class="fa fa-arrow-left"></i> Back
-        </a>
-        <h4 class="mb-0">Manage Students for <span class="text-primary"><?= htmlspecialchars($classData['name']) ?></span></h4>
+    <div class="lg-page-header">
+        <div class="d-flex align-items-center">
+            <a href="admin.php?page=class" class="btn lg-btn-back me-3">
+                <i class="fa fa-arrow-left"></i> Back
+            </a>
+            <h4 class="lg-page-title mb-0">Manage Students for <?= htmlspecialchars($classData['name']) ?></h4>
+        </div>
     </div>
 
     <form method="POST" action="../controllers/student-controller.php" class="mb-5">
         <input type="hidden" name="class_id" value="<?= $classId ?>" />
         <div class="table-responsive">
-            <table class="table table-bordered" id="studentTable">
-                <thead class="table-light">
+            <table class="table table-bordered lg-table" id="studentTable">
+                <thead>
                     <tr>
                         <th>#</th>
                         <th>First Name</th>
@@ -66,7 +68,7 @@ $existingStudents = $studentModel->getStudentsByClass($classId);
                                     <input type="checkbox" name="delete_student[]" value="<?= $student['student_id'] ?>">
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-danger btn-sm remove-row">Remove</button>
+                                    <button type="button" class="btn btn-sm lg-btn-delete remove-row">Remove</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -86,7 +88,7 @@ $existingStudents = $studentModel->getStudentsByClass($classId);
                             <td><input type="date" name="date_of_birth[]" class="form-control"></td>
                             <td><input type="text" name="contact_number[]" class="form-control"></td>
                             <td></td>
-                            <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+                            <td><button type="button" class="btn btn-sm lg-btn-delete remove-row">Remove</button></td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -94,8 +96,8 @@ $existingStudents = $studentModel->getStudentsByClass($classId);
         </div>
 
         <div class="mt-3 d-flex gap-2">
-            <button type="button" id="addRow" class="btn btn-primary"><i class="fa fa-plus"></i> Add Row</button>
-            <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Save Students</button>
+            <button type="button" id="addRow" class="btn btn-ledger-outline"><i class="fa fa-plus"></i> Add Row</button>
+            <button type="submit" class="btn lg-btn-add"><i class="fa fa-save"></i> Save Students</button>
         </div>
     </form>
 </div>
@@ -125,9 +127,9 @@ function addRow() {
             </select>
         </td>
         <td><input type="date" name="date_of_birth[]" class="form-control"></td>
-        <td><input type="text" name="contact_number[]" class="form-control" required></td>
+        <td><input type="text" name="contact_number[]" class="form-control"></td>
         <td></td>
-        <td><button type="button" class="btn btn-danger btn-sm remove-row">Remove</button></td>
+        <td><button type="button" class="btn btn-sm lg-btn-delete remove-row">Remove</button></td>
     `;
     newRow.querySelector('.remove-row').addEventListener('click', () => {
         newRow.remove();

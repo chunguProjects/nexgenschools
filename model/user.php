@@ -91,6 +91,57 @@ class User {
         return $stmt->execute();
     }
 
-    
+    /**
+     * Verify a plaintext password against the stored hash for a user.
+     * Used by the self-service "change password" flow before allowing
+     * a new password to be set.
+     */
+    public function verifyPassword($userId, $plainPassword) {
+        $query = "SELECT password FROM users WHERE user_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+
+        if (!$row) {
+            return false;
+        }
+
+        return password_verify($plainPassword, $row['password']);
+    }
+
+    /**
+     * Change only the password (separate from updateUser so the
+     * self-service password form doesn't need to resend name/email/phone).
+     */
+    public function changePassword($userId, $newPassword) {
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        $query = "UPDATE users SET password = ? WHERE user_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("si", $hashedPassword, $userId);
+        return $stmt->execute();
+    }
+
+    /**
+     * Save/replace the user's profile photo path.
+     */
+    public function updateProfilePhoto($userId, $photoPath) {
+        $query = "UPDATE users SET profile_photo = ? WHERE user_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("si", $photoPath, $userId);
+        return $stmt->execute();
+    }
+
+    /**
+     * Stamp last_login = now. Call this from your login controller
+     * right after a successful login check.
+     */
+    public function updateLastLogin($userId) {
+        $query = "UPDATE users SET last_login = NOW() WHERE user_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $userId);
+        return $stmt->execute();
+    }
+
 }
 ?>

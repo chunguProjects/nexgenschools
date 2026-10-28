@@ -30,13 +30,13 @@ $classes = $classModel->getTeacherClasses($teacherId, $academicYearId);
 ?>
 
 <div class="container py-4">
-    <h4 class="fw-bold mb-3"><i class="fas fa-users me-2 text-primary"></i>My Classes</h4>
+    <h4 class="lg-page-title mb-3"><i class="fas fa-users me-2" style="color:var(--gold);"></i>My Classes</h4>
     <p class="text-muted">These are the classes you’re assigned to teach in the academic year <strong><?= htmlspecialchars($activeYear['name']) ?></strong>.</p>
 
-    <div class="card border-0 shadow-sm">
+    <div class="card shadow-sm">
         <div class="card-body">
-            <table class="table table-hover">
-                <thead class="table-light">
+            <table class="table table-hover lg-table">
+                <thead>
                     <tr>
                         <th>Class Name</th>
                         <th>Description</th>
@@ -60,7 +60,7 @@ $classes = $classModel->getTeacherClasses($teacherId, $academicYearId);
                                         View Students
                                     </a> -->
                                     <a href="teacher.php?page=enter-grades&class_id=<?= $class['class_id'] ?>" 
-                                       class="btn btn-sm btn-outline-success">
+                                       class="btn btn-sm btn-ledger-solid">
                                         Enter Grades
                                     </a>
                                 </td>

@@ -6,10 +6,28 @@
  * @var array $grades
  * @var string $term
  * @var array $gradingCriteria
+ * @var array $students  Full class roster for this exam/class, each row
+ *                        carrying a computed 'position' (e.g. from
+ *                        computeResultsSummary()) — used to look up this
+ *                        student's rank and the class size below.
  */
 
 $totalMarks = 0;
 $subjectCount = 1;
+
+// Position in class: find this student inside the full roster and read
+// off the position already computed there, so it always matches what the
+// class results summary shows — no separate ranking logic duplicated here.
+$classSize = isset($students) ? count($students) : 0;
+$positionInClass = null;
+if (isset($students)) {
+    foreach ($students as $classmate) {
+        if (isset($classmate['student_id']) && $classmate['student_id'] == $student['student_id']) {
+            $positionInClass = $classmate['position'] ?? null;
+            break;
+        }
+    }
+}
 
 // Filter only subjects with grades
 $gradedSubjects = [];
@@ -40,9 +58,19 @@ body { font-size: 12px; }
     justify-content: space-between;
 }
 .header {
+    position: relative;
     text-align: center;
     border-bottom: 2px solid #000;
     padding-bottom: 2px;
+    min-height: 26mm; /* a bit taller than the 22mm logo so the border-bottom
+                          sits below it, not cutting through it */
+}
+.header-text {
+    position: absolute;
+    top: 0;
+    left: 40mm;  /* clears the logo — match/exceed logoX + logoWidth from the controller */
+    right: 0;
+    text-align: center;
 }
 .header-logo img {
     width: 45px;
@@ -92,11 +120,11 @@ table.signature, table.form-remarks, table.grading-criteria { width: 100%; borde
 <div class="report-container">
    <!-- HEADER -->
     <div class="header">
-        <div class="header-logo">
-            <?php if ($logoFullPath && file_exists($logoFullPath)): ?>
-                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo">
-            <?php endif; ?>
-        </div>
+    <div class="header-logo">
+        <!-- Logo is drawn directly onto the PDF canvas from the controller,
+             not rendered here — TCPDF's writeHTML() image parser doesn't
+             reliably handle absolute filesystem paths. -->
+    </div>
 
         <p class="school-name"><?= htmlspecialchars($student['school_name'] ?? 'SCHOOL NAME') ?></p>
         <p class="school-meta">
@@ -116,15 +144,19 @@ table.signature, table.form-remarks, table.grading-criteria { width: 100%; borde
             </tr>
             <tr>
                 <td><strong>Term:</strong> <?= htmlspecialchars($term) ?></td>
-                <td colspan="2" style="text-align: center;"><strong>No of Students:</strong> <?= count($students) ?></td>
+              <!--  <td colspan="2" style="text-align: center;"><strong>No of Students:</strong> <?= $classSize ?></td>-->
+                 <td  colspan="2"style="text-align: center;"><strong>Exam:</strong> <?= htmlspecialchars($student['exam_name'] ?? '-') ?></td>
+
             </tr>
-            <tr>
-                <td><strong>Exam:</strong> <?= htmlspecialchars($student['exam_name'] ?? '-') ?></td>
+            <!--<tr>
                 <td colspan="2"></td>
-            </tr>
+            </tr>-->
             <tr>
                 <td><strong>Class:</strong> <?= htmlspecialchars($student['class_name'] ?? 'N/A') ?></td>
-                <td colspan="2" style="text-align: center;"><strong>Position in Class:</strong> 30</td>
+                <td colspan="2" style="text-align: center;">
+                    <strong>Position in Class:</strong>
+                    <?= $positionInClass !== null ? htmlspecialchars((string) $positionInClass) . ' of ' . $classSize : 'N/A' ?>
+                </td>
             </tr>
         </table>
     </div>
